@@ -924,6 +924,16 @@
       }
     }
 
+    function showOnlineControls(connected) {
+      const btn = document.getElementById('disconnect-btn');
+      if (btn) btn.style.display = connected ? 'inline-block' : 'none';
+    }
+
+    function setNetStatus(text) {
+      const el = document.getElementById('net-status');
+      if (el) el.textContent = text;
+    }
+
     function setupConnection(c) {
       conn = c;
 
