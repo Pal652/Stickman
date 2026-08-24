@@ -759,6 +759,10 @@
       document.getElementById('net-status').textContent = text;
     }
 
+    if (location.protocol === 'file:') {
+      setNetStatus('Local 2-player works here. For Online, serve this file from http:// or https://');
+    }
+
     function showOnlineControls(connected) {
       document.getElementById('disconnect-btn').style.display = connected ? 'inline-block' : 'none';
     }
@@ -837,29 +841,60 @@
       conn.on('error', err => setNetStatus('Network error: ' + err.type));
     }
 
-    function hostOnline() {
-      disconnectOnline();
-      netRole = 'host';
-      peer = new Peer();
-      peer.on('open', id => {
-        document.getElementById('room-id').value = id;
-        setNetStatus('Hosting • share this Host ID with your opponent');
+    // Load PeerJS on demand so the game still works offline/local.
+    let peerLoader = null;
+    function loadPeerJS() {
+      if (window.Peer) return Promise.resolve(window.Peer);
+      if (peerLoader) return peerLoader;
+
+      peerLoader = new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = 'https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js';
+        s.async = true;
+        s.onload = () => window.Peer ? resolve(window.Peer) : reject(new Error('PeerJS loaded without Peer'));
+        s.onerror = () => reject(new Error('Could not load PeerJS. Open the game through http/https, not file://.'));
+        document.head.appendChild(s);
       });
-      peer.on('connection', c => {
-        setupConnection(c);
-        setStatus('Opponent connected!', 1800);
-      });
-      peer.on('error', err => setNetStatus('Peer error: ' + err.type));
+      return peerLoader;
     }
 
-    function joinOnline() {
+    async function hostOnline() {
+      disconnectOnline();
+      setNetStatus('Loading online multiplayer…');
+      try {
+        const PeerClass = await loadPeerJS();
+        netRole = 'host';
+        peer = new PeerClass();
+        peer.on('open', id => {
+          document.getElementById('room-id').value = id;
+          setNetStatus('Hosting • share this Host ID with your opponent');
+        });
+        peer.on('connection', c => {
+          setupConnection(c);
+          setStatus('Opponent connected!', 1800);
+        });
+        peer.on('error', err => setNetStatus('Peer error: ' + (err.type || err.message)));
+      } catch (err) {
+        netRole = 'local';
+        setNetStatus(err.message);
+      }
+    }
+
+    async function joinOnline() {
       const id = document.getElementById('room-id').value.trim();
       if (!id) return setNetStatus('Enter the host ID first');
       disconnectOnline();
-      netRole = 'client';
-      peer = new Peer();
-      peer.on('open', () => setupConnection(peer.connect(id, { reliable: true })));
-      peer.on('error', err => setNetStatus('Peer error: ' + err.type));
+      setNetStatus('Loading online multiplayer…');
+      try {
+        const PeerClass = await loadPeerJS();
+        netRole = 'client';
+        peer = new PeerClass();
+        peer.on('open', () => setupConnection(peer.connect(id, { reliable: true })));
+        peer.on('error', err => setNetStatus('Peer error: ' + (err.type || err.message)));
+      } catch (err) {
+        netRole = 'local';
+        setNetStatus(err.message);
+      }
     }
 
     function disconnectOnline() {
