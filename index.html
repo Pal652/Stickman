@@ -2,53 +2,73 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Floppy Fighters – Multiplayer Ragdoll</title>
   <style>
     * { box-sizing: border-box; }
-    body {
+    html, body {
       margin: 0;
       background: #0b0c1a;
+      min-height: 100vh;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      color: #eee;
+      user-select: none;
+    }
+    body {
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
-      height: 100vh;
-      font-family: 'Segoe UI', system-ui, sans-serif;
-      color: #eee;
-      overflow: hidden;
-      user-select: none;
+      justify-content: flex-start;
+      padding: clamp(8px, 2vh, 24px) 10px 24px;
+      overflow-x: hidden;
     }
     #game-container {
       position: relative;
+      width: min(1000px, 96vw);
     }
-    canvas {
+    canvas#world {
       background: linear-gradient(180deg, #1a1a3e 0%, #0f0f23 100%);
       border-radius: 16px;
       box-shadow: 0 0 60px rgba(76, 201, 240, 0.15), 0 0 20px rgba(247, 37, 133, 0.1);
       display: block;
+      width: 100%;
+      height: auto;
+      aspect-ratio: 1000 / 600;
     }
     #ui {
       margin-top: 16px;
       text-align: center;
-      width: 1000px;
+      width: min(1000px, 96vw);
     }
-    .scores {
+    #scoreboard {
       display: flex;
       justify-content: center;
-      gap: 60px;
+      flex-wrap: wrap;
+      gap: 8px 10px;
       margin-bottom: 8px;
     }
-    .score-box {
-      font-size: 28px;
+    .score-chip {
+      font-size: clamp(12px, 1.6vw, 15px);
       font-weight: 800;
-      letter-spacing: 1px;
-      text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+      letter-spacing: 0.5px;
+      background: rgba(255,255,255,0.04);
+      border: 1.5px solid #888;
+      border-radius: 20px;
+      padding: 4px 12px 4px 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+      transition: opacity 0.2s;
     }
-    #blue-score { color: #4cc9f0; }
-    #red-score  { color: #f72585; }
+    .score-chip .dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      display: inline-block;
+      box-shadow: 0 0 6px currentColor;
+    }
     #status {
-      font-size: 18px;
-      height: 28px;
+      font-size: clamp(14px, 2vw, 18px);
+      min-height: 26px;
       color: #ffd60a;
       font-weight: 600;
       margin: 6px 0;
@@ -56,1084 +76,981 @@
     .controls {
       display: flex;
       justify-content: space-between;
-      font-size: 13px;
+      flex-wrap: wrap;
+      gap: 6px;
+      font-size: clamp(11px, 1.6vw, 13px);
       color: #888;
       margin-top: 10px;
-      padding: 0 20px;
+      padding: 0 10px;
     }
     .controls span { background: #1a1a2e; padding: 4px 10px; border-radius: 6px; }
     button {
       margin-top: 12px;
-      padding: 10px 28px;
-      font-size: 16px;
+      padding: 10px 22px;
+      font-size: clamp(13px, 1.8vw, 16px);
       font-weight: 600;
       border: none;
       border-radius: 10px;
       background: linear-gradient(135deg, #4361ee, #3a0ca3);
       color: white;
       cursor: pointer;
-      transition: transform 0.1s, box-shadow 0.2s;
+      transition: transform 0.1s, box-shadow 0.2s, opacity 0.2s;
     }
-    button:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(67, 97, 238, 0.4);
-    }
+    button:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(67, 97, 238, 0.4); }
     button:active { transform: translateY(0); }
+    button:disabled { opacity: 0.4; cursor: not-allowed; transform:none; box-shadow:none; }
+    #room-id {
+      padding: 10px 12px; border: 0; border-radius: 10px;
+      background: #1a1a2e; color: #fff; width: 150px; max-width: 40vw;
+      font-size: clamp(13px, 1.8vw, 15px);
+    }
     #goal-banner {
       position: absolute;
-      top: 12px;
+      top: 10px;
       left: 50%;
       transform: translateX(-50%);
       background: rgba(0,0,0,0.65);
-      padding: 6px 18px;
+      padding: 5px 14px;
       border-radius: 20px;
-      font-size: 15px;
+      font-size: clamp(10px, 1.6vw, 14px);
       color: #ffd60a;
       pointer-events: none;
       z-index: 10;
       border: 1px solid rgba(255, 214, 10, 0.3);
+      white-space: nowrap;
+      max-width: 92%;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     #crown-timer {
       position: absolute;
-      top: 48px;
+      top: 44px;
       left: 50%;
       transform: translateX(-50%);
       background: rgba(0,0,0,0.75);
-      padding: 6px 20px;
+      padding: 5px 18px;
       border-radius: 16px;
-      font-size: 22px;
+      font-size: clamp(15px, 2.4vw, 22px);
       font-weight: 800;
       color: #ffd60a;
       pointer-events: none;
       z-index: 10;
       border: 2px solid rgba(255, 214, 10, 0.5);
-      min-width: 90px;
+      min-width: 80px;
       text-align: center;
       display: none;
       letter-spacing: 1px;
     }
-    #crown-timer.blue { color: #4cc9f0; border-color: rgba(76, 201, 240, 0.6); }
-    #crown-timer.red  { color: #f72585; border-color: rgba(247, 37, 133, 0.6); }
-    .power-display {
-      position: absolute;
-      top: 50px;
-      background: rgba(0,0,0,0.7);
-      padding: 8px 12px;
-      border-radius: 10px;
-      font-size: 13px;
-      font-weight: 600;
-      pointer-events: none;
-      z-index: 10;
-      line-height: 1.45;
-      min-width: 110px;
-    }
-    #blue-power {
-      left: 12px;
-      color: #4cc9f0;
-      border: 1px solid rgba(76, 201, 240, 0.4);
-    }
-    #red-power {
-      right: 12px;
-      color: #f72585;
-      border: 1px solid rgba(247, 37, 133, 0.4);
-      text-align: right;
+    #net-status { font-size: 13px; color: #888; margin-top: 8px; }
+    .toolbar {
+      margin-top: 12px; display: flex; justify-content: center; gap: 8px;
+      align-items: center; flex-wrap: wrap;
     }
   </style>
 </head>
 <body>
   <div id="game-container">
-    <div id="goal-banner">🏆 First to 5 wins • Random maps & powers every round • Hold the crown!</div>
+    <div id="goal-banner">🏆 First to 5 wins • Up to 10 players • Last one standing or hold the crown 5s!</div>
     <div id="crown-timer">5.0</div>
-    <div class="power-display" id="blue-power">MOVE 100%<br>JUMP 100%</div>
-    <div class="power-display" id="red-power">MOVE 100%<br>JUMP 100%</div>
     <canvas id="world" width="1000" height="600"></canvas>
   </div>
   <div id="ui">
-    <div class="scores">
-      <div class="score-box" id="blue-score">BLUE 0</div>
-      <div class="score-box" id="red-score">RED 0</div>
-    </div>
+    <div id="scoreboard"></div>
     <div id="status">Random maps & powers every round!</div>
     <div class="controls">
-      <span>BLUE: A D move • W jump • S slam</span>
-      <span>RED: ← → move • ↑ jump • ↓ slam</span>
+      <span>HOST / LOCAL P1: A D move • W jump • S slam</span>
+      <span>JOINED / LOCAL P2: ← → move • ↑ jump • ↓ slam</span>
     </div>
-    <div style="margin-top:12px;display:flex;justify-content:center;gap:8px;align-items:center;flex-wrap:wrap">
-      <button id="new-match-btn" onclick="requestNewMatch()">New Match</button>
-      <button onclick="hostOnline()">Host Online</button>
-      <input id="room-id" placeholder="Host ID" maxlength="40"
-        style="padding:10px 12px;border:0;border-radius:10px;background:#1a1a2e;color:#fff;width:150px">
-      <button onclick="joinOnline()">Join Online</button>
-      <button onclick="disconnectOnline()" id="disconnect-btn" style="display:none">Disconnect</button>
+    <div class="toolbar">
+      <button id="new-match-btn">New Match</button>
+      <button id="host-btn">Host Online</button>
+      <input id="room-id" placeholder="Host ID" maxlength="40">
+      <button id="join-btn">Join Online</button>
+      <button id="disconnect-btn" style="display:none">Disconnect</button>
     </div>
-    <div id="net-status" style="font-size:13px;color:#888;margin-top:8px">Local 2-player</div>
+    <div id="net-status">Local 2-player</div>
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
   <script>
-    const { Engine, Render, Runner, Bodies, Composite, Constraint, Body, Events, Vector, Query } = Matter;
+  (function () {
+    'use strict';
+    const { Engine, Render, Runner, Bodies, Composite, Constraint, Body, Events, Query } = Matter;
 
-    const canvas = document.getElementById('world');
-    const engine = Engine.create();
-    const world = engine.world;
-    engine.gravity.y = 1.25;
+    // ========================= CONSTANTS =========================
+    const WORLD_W = 1000, WORLD_H = 600;
+    const MAX_PLAYERS = 10;
+    const SCORE_TO_WIN = 5;
+    const CROWN_HOLD_TIME = 5.0;
+    const FALL_DEBOUNCE = 1200;
+    const PLAYER_COLORS = [
+      '#4cc9f0', '#f72585', '#ffd60a', '#06d6a0', '#f4a261',
+      '#9d4edd', '#ef476f', '#118ab2', '#c1121f', '#7209b7'
+    ];
+    const KEYMAP_WASD   = { left: 'KeyA',      right: 'KeyD',       jump: 'KeyW',    slam: 'KeyS'      };
+    const KEYMAP_ARROWS = { left: 'ArrowLeft', right: 'ArrowRight', jump: 'ArrowUp', slam: 'ArrowDown' };
 
-    const render = Render.create({
-      canvas: canvas,
-      engine: engine,
-      options: {
-        width: 1000,
-        height: 600,
-        wireframes: false,
-        background: 'transparent',
-        showAngleIndicator: false
-      }
-    });
-
-    // ========== LEVEL ==========
-    const ground = Bodies.rectangle(500, 590, 960, 30, {
-      isStatic: true,
-      render: { fillStyle: '#16213e' },
-      friction: 0.9
-    });
-    // No side walls — players can be knocked off the left/right edges too
-
-    // ========== MAPS ==========
-    let platforms = [];
-    let currentMapName = '';
-
-    const maps = [
+    // ========================= MAPS =========================
+    const MAPS = [
       {
         name: 'Classic Hills',
         platforms: [
-          [180, 420, 200, 22, '#0f3460'],
-          [820, 420, 200, 22, '#0f3460'],
-          [500, 300, 160, 22, '#e94560'],
-          [320, 200, 120, 18, '#0f3460'],
-          [680, 200, 120, 18, '#0f3460'],
+          [180, 420, 200, 22, '#0f3460'], [820, 420, 200, 22, '#0f3460'],
+          [500, 300, 160, 22, '#e94560'], [320, 200, 120, 18, '#0f3460'], [680, 200, 120, 18, '#0f3460'],
         ],
         crates: [[250, 500], [750, 500], [500, 250], [400, 380], [600, 380]],
-        blueSpawn: [200, 280],
-        redSpawn: [800, 280]
+        blueSpawn: [200, 280], redSpawn: [800, 280]
       },
       {
         name: 'The Pit',
         platforms: [
-          [150, 450, 180, 22, '#0f3460'],
-          [850, 450, 180, 22, '#0f3460'],
-          [500, 380, 220, 22, '#e94560'],
-          [300, 250, 100, 18, '#0f3460'],
-          [700, 250, 100, 18, '#0f3460'],
+          [150, 450, 180, 22, '#0f3460'], [850, 450, 180, 22, '#0f3460'],
+          [500, 380, 220, 22, '#e94560'], [300, 250, 100, 18, '#0f3460'], [700, 250, 100, 18, '#0f3460'],
           [500, 150, 140, 18, '#0f3460'],
         ],
         crates: [[200, 520], [800, 520], [450, 330], [550, 330], [500, 100]],
-        blueSpawn: [180, 320],
-        redSpawn: [820, 320]
+        blueSpawn: [180, 320], redSpawn: [820, 320]
       },
       {
         name: 'Sky Bridges',
         platforms: [
-          [120, 500, 160, 20, '#0f3460'],
-          [880, 500, 160, 20, '#0f3460'],
-          [300, 380, 140, 18, '#0f3460'],
-          [700, 380, 140, 18, '#0f3460'],
-          [500, 260, 180, 20, '#e94560'],
-          [200, 160, 110, 16, '#0f3460'],
-          [800, 160, 110, 16, '#0f3460'],
+          [120, 500, 160, 20, '#0f3460'], [880, 500, 160, 20, '#0f3460'],
+          [300, 380, 140, 18, '#0f3460'], [700, 380, 140, 18, '#0f3460'],
+          [500, 260, 180, 20, '#e94560'], [200, 160, 110, 16, '#0f3460'], [800, 160, 110, 16, '#0f3460'],
         ],
         crates: [[150, 460], [850, 460], [500, 220], [350, 340], [650, 340]],
-        blueSpawn: [140, 380],
-        redSpawn: [860, 380]
+        blueSpawn: [140, 380], redSpawn: [860, 380]
       },
       {
         name: 'Zigzag',
         platforms: [
-          [200, 500, 180, 20, '#0f3460'],
-          [800, 500, 180, 20, '#0f3460'],
-          [350, 380, 130, 18, '#0f3460'],
-          [650, 380, 130, 18, '#0f3460'],
-          [500, 280, 120, 18, '#e94560'],
-          [250, 180, 100, 16, '#0f3460'],
-          [750, 180, 100, 16, '#0f3460'],
+          [200, 500, 180, 20, '#0f3460'], [800, 500, 180, 20, '#0f3460'],
+          [350, 380, 130, 18, '#0f3460'], [650, 380, 130, 18, '#0f3460'],
+          [500, 280, 120, 18, '#e94560'], [250, 180, 100, 16, '#0f3460'], [750, 180, 100, 16, '#0f3460'],
         ],
         crates: [[220, 460], [780, 460], [500, 240], [400, 340], [600, 340]],
-        blueSpawn: [220, 380],
-        redSpawn: [780, 380]
+        blueSpawn: [220, 380], redSpawn: [780, 380]
       },
       {
         name: 'Narrow Ledges',
         platforms: [
-          [100, 480, 120, 18, '#0f3460'],
-          [900, 480, 120, 18, '#0f3460'],
-          [300, 360, 100, 16, '#0f3460'],
-          [700, 360, 100, 16, '#0f3460'],
-          [500, 240, 140, 18, '#e94560'],
-          [200, 150, 90, 14, '#0f3460'],
-          [800, 150, 90, 14, '#0f3460'],
+          [100, 480, 120, 18, '#0f3460'], [900, 480, 120, 18, '#0f3460'],
+          [300, 360, 100, 16, '#0f3460'], [700, 360, 100, 16, '#0f3460'],
+          [500, 240, 140, 18, '#e94560'], [200, 150, 90, 14, '#0f3460'], [800, 150, 90, 14, '#0f3460'],
           [500, 480, 80, 16, '#0f3460'],
         ],
         crates: [[120, 440], [880, 440], [500, 200], [320, 320], [680, 320]],
-        blueSpawn: [120, 360],
-        redSpawn: [880, 360]
+        blueSpawn: [120, 360], redSpawn: [880, 360]
       },
       {
         name: 'Big Arena',
         platforms: [
-          [250, 450, 280, 24, '#0f3460'],
-          [750, 450, 280, 24, '#0f3460'],
-          [500, 300, 200, 22, '#e94560'],
-          [150, 200, 140, 18, '#0f3460'],
-          [850, 200, 140, 18, '#0f3460'],
+          [250, 450, 280, 24, '#0f3460'], [750, 450, 280, 24, '#0f3460'],
+          [500, 300, 200, 22, '#e94560'], [150, 200, 140, 18, '#0f3460'], [850, 200, 140, 18, '#0f3460'],
         ],
         crates: [[300, 400], [700, 400], [500, 250], [400, 500], [600, 500], [200, 520], [800, 520]],
-        blueSpawn: [250, 320],
-        redSpawn: [750, 320]
+        blueSpawn: [250, 320], redSpawn: [750, 320]
       }
     ];
 
-    let currentMap = maps[0];
-
-    function loadMap(map) {
-      // Remove old platforms
-      platforms.forEach(p => Composite.remove(world, p));
-      platforms = [];
-
-      map.platforms.forEach(([x, y, w, h, color]) => {
-        const plat = Bodies.rectangle(x, y, w, h, {
-          isStatic: true,
-          render: { fillStyle: color },
-          friction: 0.8
-        });
-        platforms.push(plat);
-        Composite.add(world, plat);
-      });
-
-      currentMap = map;
-      currentMapName = map.name;
-    }
-
-    // Fun props – pushable crates
-    const crates = [];
-    function spawnCrates(positions) {
-      crates.forEach(c => Composite.remove(world, c));
-      crates.length = 0;
-      (positions || currentMap.crates).forEach(([x, y]) => {
-        const crate = Bodies.rectangle(x, y, 36, 36, {
-          density: 0.003,
-          friction: 0.6,
-          restitution: 0.2,
-          render: { fillStyle: '#f4a261' },
-          chamfer: { radius: 4 }
-        });
-        crates.push(crate);
-        Composite.add(world, crate);
-      });
-    }
-
-    Composite.add(world, [ground]);
-    loadMap(maps[0]);
-    spawnCrates();
-
-    // ========== CROWN (the fun goal) ==========
-    let crown = null;
-    let crownHolder = null; // 'blue' | 'red' | null
-    let crownTimer = 0;
-    const CROWN_HOLD_TIME = 5.0; // seconds to get a bonus point
-    const crownTimerEl = document.getElementById('crown-timer');
-
-    function createCrown() {
-      if (crown) Composite.remove(world, crown);
-      crown = Bodies.circle(500, 120, 16, {
-        density: 0.0008,
-        friction: 0.3,
-        restitution: 0.6,
-        render: {
-          fillStyle: '#ffd60a',
-          strokeStyle: '#ff9f1c',
-          lineWidth: 3
-        },
-        label: 'crown'
-      });
-      // Little "points" to make it look crown-ish
-      Composite.add(world, crown);
-      crownHolder = null;
-      crownTimer = 0;
-    }
-    createCrown();
-
-    // ========== RAGDOLL ==========
-    function createRagdoll(x, y, color, label) {
-      const group = Body.nextGroup(true);
-
-      // Start more upright
-      const head = Bodies.circle(x, y - 55, 16, {
-        collisionFilter: { group },
-        render: { fillStyle: color },
-        density: 0.0016,
-        friction: 0.12,
-        restitution: 0.2,
-        label: label + '-head'
-      });
-      const torso = Bodies.rectangle(x, y, 24, 46, {
-        collisionFilter: { group },
-        render: { fillStyle: color },
-        density: 0.0024,
-        friction: 0.35,
-        chamfer: { radius: 6 },
-        label: label + '-torso'
-      });
-      const leftArm = Bodies.rectangle(x - 26, y - 10, 12, 36, {
-        collisionFilter: { group },
-        render: { fillStyle: color },
-        density: 0.0008,
-        friction: 0.12,
-        chamfer: { radius: 4 }
-      });
-      const rightArm = Bodies.rectangle(x + 26, y - 10, 12, 36, {
-        collisionFilter: { group },
-        render: { fillStyle: color },
-        density: 0.0008,
-        friction: 0.12,
-        chamfer: { radius: 4 }
-      });
-      const leftLeg = Bodies.rectangle(x - 10, y + 46, 12, 40, {
-        collisionFilter: { group },
-        render: { fillStyle: color },
-        density: 0.0015,
-        friction: 0.45,
-        chamfer: { radius: 4 }
-      });
-      const rightLeg = Bodies.rectangle(x + 10, y + 46, 12, 40, {
-        collisionFilter: { group },
-        render: { fillStyle: color },
-        density: 0.0015,
-        friction: 0.45,
-        chamfer: { radius: 4 }
-      });
-
-      // Higher stiffness = more controllable, still floppy on impact
-      const constraints = [
-        Constraint.create({ bodyA: head, bodyB: torso, pointA: { x: 0, y: 16 }, pointB: { x: 0, y: -23 }, stiffness: 0.95, damping: 0.15, length: 1 }),
-        Constraint.create({ bodyA: torso, bodyB: leftArm, pointA: { x: -12, y: -15 }, pointB: { x: 0, y: -13 }, stiffness: 0.65, damping: 0.08, length: 3 }),
-        Constraint.create({ bodyA: torso, bodyB: rightArm, pointA: { x: 12, y: -15 }, pointB: { x: 0, y: -13 }, stiffness: 0.65, damping: 0.08, length: 3 }),
-        Constraint.create({ bodyA: torso, bodyB: leftLeg, pointA: { x: -8, y: 23 }, pointB: { x: 0, y: -17 }, stiffness: 0.85, damping: 0.12, length: 2 }),
-        Constraint.create({ bodyA: torso, bodyB: rightLeg, pointA: { x: 8, y: 23 }, pointB: { x: 0, y: -17 }, stiffness: 0.85, damping: 0.12, length: 2 })
-      ];
-
-      const parts = [head, torso, leftArm, rightArm, leftLeg, rightLeg];
-      Composite.add(world, [...parts, ...constraints]);
-
-      // Give a tiny upward nudge so they don't immediately collapse
-      Body.setVelocity(torso, { x: 0, y: -1.5 });
-
-      return {
-        parts,
-        head,
-        torso,
-        leftLeg,
-        rightLeg,
-        leftArm,
-        rightArm,
-        color,
-        label,
-        canJump: true,
-        lastJump: 0,
-        moveMult: 1.0,
-        jumpMult: 1.0,
-        jumpHeld: false,
-        jumpStartedAt: 0
-      };
-    }
-
-    let blue = createRagdoll(currentMap.blueSpawn[0], currentMap.blueSpawn[1], '#4cc9f0', 'blue');
-    let red  = createRagdoll(currentMap.redSpawn[0], currentMap.redSpawn[1], '#f72585', 'red');
-
-    // Will be called properly after functions are defined; placeholder until then
-    // ========== INPUT ==========
-    const keys = {};
-    window.addEventListener('keydown', e => {
-      keys[e.code] = true;
-      if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)) e.preventDefault();
-    });
-    window.addEventListener('blur', () => {
-      for (const k in keys) keys[k] = false;
-    });
-    window.addEventListener('keyup', e => {
-      keys[e.code] = false;
-      if (e.code === 'KeyW') cutJump(blue);
-      if (e.code === 'ArrowUp') cutJump(red);
-    });
-
-    function cutJump(player) {
-      if (!player.jumpHeld) return;
-      player.jumpHeld = false;
-      if (Date.now() - player.jumpStartedAt < 180) {
-        for (const part of player.parts) {
-          if (part.velocity.y < -2) {
-            Body.setVelocity(part, {
-              x: part.velocity.x,
-              y: Math.max(part.velocity.y, -6.5)
-            });
-          }
-        }
-      }
-    }
-
-    function isOnGround(player) {
-      // Can jump from platforms, ground, crates, OR the other player
-      const other = (player === blue) ? red : blue;
-      const surfaces = platforms.concat([ground], crates, other.parts);
-
-      const legs = [player.leftLeg, player.rightLeg];
-      for (const leg of legs) {
-        if (Query.collides(leg, surfaces).length > 0) return true;
-      }
-      // also allow torso contact (lying / standing on something)
-      if (Query.collides(player.torso, surfaces).length > 0) return true;
-      return false;
-    }
-
-    // Per-player power multipliers (randomized each round, kept reasonably close)
-    function randomizePowers() {
-      // Move: 0.75 → 1.25  (not too extreme)
-      // Jump: 0.85 → 1.40
-      blue.moveMult = 0.75 + Math.random() * 0.50;
-      blue.jumpMult = 0.85 + Math.random() * 0.55;
-      red.moveMult  = 0.75 + Math.random() * 0.50;
-      red.jumpMult  = 0.85 + Math.random() * 0.55;
-      updatePowerUI();
-    }
-
-    function updatePowerUI() {
-      const bMove = Math.round(blue.moveMult * 100);
-      const bJump = Math.round(blue.jumpMult * 100);
-      const rMove = Math.round(red.moveMult * 100);
-      const rJump = Math.round(red.jumpMult * 100);
-      document.getElementById('blue-power').innerHTML = `MOVE ${bMove}%<br>JUMP ${bJump}%`;
-      document.getElementById('red-power').innerHTML  = `MOVE ${rMove}%<br>JUMP ${rJump}%`;
-    }
-
-    function control(player, leftKey, rightKey, jumpKey, slamKey, keyState = keys) {
-      const baseMove = 0.018;
-      const baseJump = 0.154;
-      const moveForce = baseMove * (player.moveMult || 1);
-      const jumpForce = baseJump * (player.jumpMult || 1);
-      const slamForce = 0.035;
-
-      if (keyState[leftKey]) {
-        Body.applyForce(player.torso, player.torso.position, { x: -moveForce, y: 0 });
-        Body.applyForce(player.head, player.head.position, { x: -moveForce * 0.35, y: 0 });
-        Body.applyForce(player.leftLeg, player.leftLeg.position, { x: -moveForce * 0.25, y: 0 });
-      }
-      if (keyState[rightKey]) {
-        Body.applyForce(player.torso, player.torso.position, { x: moveForce, y: 0 });
-        Body.applyForce(player.head, player.head.position, { x: moveForce * 0.35, y: 0 });
-        Body.applyForce(player.rightLeg, player.rightLeg.position, { x: moveForce * 0.25, y: 0 });
+    // ========================= RAGDOLL PLAYER =========================
+    class RagdollPlayer {
+      constructor(game, id, x, y, color) {
+        this.game = game;
+        this.id = id;
+        this.color = color;
+        this.moveMult = 1.0;
+        this.jumpMult = 1.0;
+        this.lastJump = 0;
+        this.jumpHeld = false;
+        this.jumpStartedAt = 0;
+        this.alive = false;
+        this.parts = [];
+        this.joints = [];
+        this.springs = [];
+        this.head = this.torso = this.leftArm = this.rightArm = this.leftLeg = this.rightLeg = null;
+        this.spawnBody(x, y);
       }
 
-      const now = Date.now();
-      if (keyState[jumpKey] && !player.jumpHeld && isOnGround(player) && (now - player.lastJump > 320)) {
-        Body.applyForce(player.torso, player.torso.position, { x: 0, y: -jumpForce });
-        Body.applyForce(player.head, player.head.position, { x: 0, y: -jumpForce * 0.45 });
-        Body.applyForce(player.leftLeg, player.leftLeg.position, { x: 0, y: -jumpForce * 0.2 });
-        Body.applyForce(player.rightLeg, player.rightLeg.position, { x: 0, y: -jumpForce * 0.2 });
-        player.lastJump = now;
-        player.jumpHeld = true;
-        player.jumpStartedAt = now;
+      // (Re)creates this player's physical body at the given position.
+      spawnBody(x, y) {
+        this.removeBody();
+        const world = this.game.world;
+        const group = Body.nextGroup(true);
+        const mk = (name, body) => { body.label = `${this.id}:${name}`; this[name] = body; return body; };
+
+        const head = mk('head', Bodies.circle(x, y - 55, 16, {
+          collisionFilter: { group }, render: { fillStyle: this.color },
+          density: 0.0016, friction: 0.12, restitution: 0.2
+        }));
+        const torso = mk('torso', Bodies.rectangle(x, y, 24, 46, {
+          collisionFilter: { group }, render: { fillStyle: this.color },
+          density: 0.0024, friction: 0.35, chamfer: { radius: 6 }
+        }));
+        const leftArm = mk('leftArm', Bodies.rectangle(x - 26, y - 10, 12, 36, {
+          collisionFilter: { group }, render: { fillStyle: this.color },
+          density: 0.0008, friction: 0.12, chamfer: { radius: 4 }
+        }));
+        const rightArm = mk('rightArm', Bodies.rectangle(x + 26, y - 10, 12, 36, {
+          collisionFilter: { group }, render: { fillStyle: this.color },
+          density: 0.0008, friction: 0.12, chamfer: { radius: 4 }
+        }));
+        const leftLeg = mk('leftLeg', Bodies.rectangle(x - 10, y + 46, 12, 40, {
+          collisionFilter: { group }, render: { fillStyle: this.color },
+          density: 0.0015, friction: 0.45, chamfer: { radius: 4 }
+        }));
+        const rightLeg = mk('rightLeg', Bodies.rectangle(x + 10, y + 46, 12, 40, {
+          collisionFilter: { group }, render: { fillStyle: this.color },
+          density: 0.0015, friction: 0.45, chamfer: { radius: 4 }
+        }));
+
+        this.joints = [
+          Constraint.create({ bodyA: head, bodyB: torso, pointA: { x: 0, y: 16 }, pointB: { x: 0, y: -23 }, stiffness: 0.95, damping: 0.15, length: 1 }),
+          Constraint.create({ bodyA: torso, bodyB: leftArm, pointA: { x: -12, y: -15 }, pointB: { x: 0, y: -13 }, stiffness: 0.65, damping: 0.08, length: 3 }),
+          Constraint.create({ bodyA: torso, bodyB: rightArm, pointA: { x: 12, y: -15 }, pointB: { x: 0, y: -13 }, stiffness: 0.65, damping: 0.08, length: 3 }),
+          Constraint.create({ bodyA: torso, bodyB: leftLeg, pointA: { x: -8, y: 23 }, pointB: { x: 0, y: -17 }, stiffness: 0.85, damping: 0.12, length: 2 }),
+          Constraint.create({ bodyA: torso, bodyB: rightLeg, pointA: { x: 8, y: 23 }, pointB: { x: 0, y: -17 }, stiffness: 0.85, damping: 0.12, length: 2 }),
+        ];
+
+        this.parts = [head, torso, leftArm, rightArm, leftLeg, rightLeg];
+        this.springs = this._buildAntiPenetrationSprings();
+
+        Composite.add(world, [...this.parts, ...this.joints, ...this.springs]);
+        Body.setVelocity(torso, { x: 0, y: -1.5 });
+        this.alive = true;
       }
 
-      if (!keyState[jumpKey] && player.jumpHeld) cutJump(player);
-      if (player.jumpHeld && now - player.jumpStartedAt > 180) player.jumpHeld = false;
-
-      if (keyState[slamKey]) {
-        Body.applyForce(player.head, player.head.position, { x: 0, y: slamForce });
-        Body.applyForce(player.torso, player.torso.position, { x: 0, y: slamForce * 0.8 });
-      }
-    }
-
-    // ========== SCORING & GAME STATE ==========
-    let blueScore = 0;
-    let redScore = 0;
-    let matchOver = false;
-    let lastFall = 0;
-
-    function updateUI() {
-      document.getElementById('blue-score').textContent = `BLUE ${blueScore}`;
-      document.getElementById('red-score').textContent  = `RED ${redScore}`;
-    }
-
-    function setStatus(msg, duration = 2000) {
-      const el = document.getElementById('status');
-      el.textContent = msg;
-      if (duration) {
-        setTimeout(() => {
-          if (!matchOver) el.textContent = crownHolder ? `${crownHolder.toUpperCase()} has the crown!` : 'Fight!';
-        }, duration);
-      }
-    }
-
-    function resetPositions(keepMapAndPowers = false) {
-      // Save current powers so we can restore them after recreating the bodies
-      const savedBlueMove = blue.moveMult;
-      const savedBlueJump = blue.jumpMult;
-      const savedRedMove  = red.moveMult;
-      const savedRedJump  = red.jumpMult;
-
-      // Remove old ragdolls
-      Composite.remove(world, blue.parts);
-      Composite.remove(world, red.parts);
-
-      if (!keepMapAndPowers) {
-        // Full reset → new random map
-        const map = maps[Math.floor(Math.random() * maps.length)];
-        loadMap(map);
-        spawnCrates(map.crates);
-      }
-
-      const [bx, by] = currentMap.blueSpawn;
-      const [rx, ry] = currentMap.redSpawn;
-      blue = createRagdoll(bx, by, '#4cc9f0', 'blue');
-      red  = createRagdoll(rx, ry, '#f72585', 'red');
-
-      if (keepMapAndPowers) {
-        // Keep the same powers
-        blue.moveMult = savedBlueMove;
-        blue.jumpMult = savedBlueJump;
-        red.moveMult  = savedRedMove;
-        red.jumpMult  = savedRedJump;
-        updatePowerUI();
-      } else {
-        randomizePowers();
-        setStatus(`🗺 ${currentMap.name}`, 2500);
-      }
-
-      createCrown();
-      crownHolder = null;
-      crownTimer = 0; // only the crown timer is always reset
-    }
-
-    function fullReset() {
-      blueScore = 0;
-      redScore = 0;
-      matchOver = false;
-      onlineGameStarted = false;
-      updateUI();
-      resetPositions(false); // new map + new powers
-      if (netRole === 'local') {
-        onlineMatchActive = false;
-        setNewMatchEnabled(false);
-      }
-      setStatus('New match! First to 5 • Random maps & powers!', 2500);
-    }
-
-    function isOutOfBounds(player) {
-      const t = player.torso.position;
-      const h = player.head.position;
-      // Fallen off bottom or flown way off the sides
-      return (
-        t.y > 680 || h.y > 680 ||
-        t.x < -80 || t.x > 1080 ||
-        h.x < -80 || h.x > 1080
-      );
-    }
-
-    function checkFall() {
-      const now = Date.now();
-      if (now - lastFall < 1200) return; // debounce
-
-      if (isOutOfBounds(blue)) {
-        redScore++;
-        lastFall = now;
-        updateUI();
-        setStatus('🔴 RED scores a knockout!');
-        if (redScore >= 5) {
-          matchOver = true;
-          endOnlineMatch();
-          setStatus('🔴 RED WINS THE MATCH!', 0);
-        } else {
-          setTimeout(resetPositions, 900);
-        }
-      } else if (isOutOfBounds(red)) {
-        blueScore++;
-        lastFall = now;
-        updateUI();
-        setStatus('🔵 BLUE scores a knockout!');
-        if (blueScore >= 5) {
-          matchOver = true;
-          endOnlineMatch();
-          setStatus('🔵 BLUE WINS THE MATCH!', 0);
-        } else {
-          setTimeout(resetPositions, 900);
-        }
-      }
-    }
-
-    // Crown / ball logic
-    function updateCrownTimerUI() {
-      if (!crownHolder) {
-        crownTimerEl.style.display = 'none';
-        return;
-      }
-      const remaining = Math.max(0, CROWN_HOLD_TIME - crownTimer);
-      crownTimerEl.style.display = 'block';
-      crownTimerEl.textContent = remaining.toFixed(1);
-      crownTimerEl.className = crownHolder; // applies .blue or .red
-    }
-
-    function updateCrown(dt) {
-      if (!crown || matchOver) {
-        crownTimerEl.style.display = 'none';
-        return;
-      }
-
-      const blueTouch = Query.collides(crown, blue.parts).length > 0;
-      const redTouch  = Query.collides(crown, red.parts).length > 0;
-
-      // Both touching → contested, reset timer
-      if (blueTouch && redTouch) {
-        if (crownHolder) {
-          crownHolder = null;
-          crownTimer = 0;
-          setStatus('⚔️ Contested!');
-        }
-      }
-      // Only blue touches → claim / steal (resets timer)
-      else if (blueTouch && !redTouch) {
-        if (crownHolder !== 'blue') {
-          crownHolder = 'blue';
-          crownTimer = 0;
-          setStatus('🔵 BLUE grabbed the crown!');
-        }
-      }
-      // Only red touches → claim / steal (resets timer)
-      else if (redTouch && !blueTouch) {
-        if (crownHolder !== 'red') {
-          crownHolder = 'red';
-          crownTimer = 0;
-          setStatus('🔴 RED grabbed the crown!');
-        }
-      }
-      // Nobody touching → do NOT stop the timer (keeps running for current holder)
-
-      // Timer keeps running as long as someone holds claim
-      if (crownHolder === 'blue') {
-        crownTimer += dt;
-        if (crownTimer >= CROWN_HOLD_TIME) {
-          blueScore++;
-          updateUI();
-          setStatus('🔵 BLUE held the crown! +1');
-          crownTimer = 0;
-          crownHolder = null;
-          Body.setVelocity(crown, { x: (Math.random() - 0.5) * 18, y: -14 });
-          if (blueScore >= 5) {
-            matchOver = true;
-            endOnlineMatch();
-            setStatus('🔵 BLUE WINS THE MATCH!', 0);
-          }
-        }
-      } else if (crownHolder === 'red') {
-        crownTimer += dt;
-        if (crownTimer >= CROWN_HOLD_TIME) {
-          redScore++;
-          updateUI();
-          setStatus('🔴 RED held the crown! +1');
-          crownTimer = 0;
-          crownHolder = null;
-          Body.setVelocity(crown, { x: (Math.random() - 0.5) * 18, y: -14 });
-          if (redScore >= 5) {
-            matchOver = true;
-            endOnlineMatch();
-            setStatus('🔴 RED WINS THE MATCH!', 0);
-          }
-        }
-      }
-
-      // If the ball leaves the play area → treat as no one holding it
-      if (crown.position.y > 700 || crown.position.x < -100 || crown.position.x > 1100) {
-        Body.setPosition(crown, { x: 500, y: 80 });
-        Body.setVelocity(crown, { x: 0, y: 0 });
-        crownHolder = null;
-        crownTimer = 0;
-      }
-
-      updateCrownTimerUI();
-    }
-
-    // ========== ONLINE MULTIPLAYER ==========
-    // Host owns the only authoritative Matter.js simulation.
-    let peer = null;
-    let conn = null;
-    let netRole = 'local'; // local | host | client
-    let remoteKeys = {};
-    let snapshotClock = 0;
-    let onlineMatchActive = false;
-    let onlineGameStarted = false;
-    let peerLoader = null;
-
-    function setNetStatus(text) {
-      document.getElementById('net-status').textContent = text;
-    }
-
-    function setNewMatchEnabled(enabled) {
-      const btn = document.getElementById('new-match-btn');
-      if (btn) btn.disabled = !enabled;
-    }
-
-    function getOnlineKeys() {
-      // Both online players use arrow keys. Host = BLUE, joined = RED.
-      return {
-        ArrowLeft: !!keys.ArrowLeft,
-        ArrowRight: !!keys.ArrowRight,
-        ArrowUp: !!keys.ArrowUp,
-        ArrowDown: !!keys.ArrowDown
-      };
-    }
-
-    function serializeBodies() {
-      return [...blue.parts, ...red.parts, crown].filter(Boolean).map(b => ({
-        id: b.id,
-        x: b.position.x, y: b.position.y,
-        a: b.angle,
-        vx: b.velocity.x, vy: b.velocity.y,
-        av: b.angularVelocity
-      }));
-    }
-
-    function serializeCrates() {
-      return crates.map(c => ({
-        x: c.position.x, y: c.position.y,
-        a: c.angle,
-        vx: c.velocity.x, vy: c.velocity.y,
-        av: c.angularVelocity
-      }));
-    }
-
-    function makeSnapshot() {
-      return {
-        type: 'state',
-        mapIndex: maps.indexOf(currentMap),
-        bodies: serializeBodies(),
-        crates: serializeCrates(),
-        blueScore,
-        redScore,
-        matchOver,
-        onlineGameStarted,
-        crownHolder,
-        crownTimer,
-        powers: {
-          bm: blue.moveMult, bj: blue.jumpMult,
-          rm: red.moveMult, rj: red.jumpMult
-        }
-      };
-    }
-
-    function applySnapshot(msg) {
-      // 1) Level is authoritative too.
-      const map = maps[msg.mapIndex] || maps[0];
-      if (currentMap !== map) {
-        loadMap(map);
-        spawnCrates(map.crates);
-      }
-
-      // 2) Score/counter is authoritative, so joined always sees it.
-      blueScore = Number(msg.blueScore) || 0;
-      redScore = Number(msg.redScore) || 0;
-      matchOver = !!msg.matchOver;
-      onlineGameStarted = !!msg.onlineGameStarted;
-      onlineMatchActive = onlineGameStarted;
-
-      crownHolder = msg.crownHolder || null;
-      crownTimer = Number(msg.crownTimer) || 0;
-
-      if (msg.powers) {
-        blue.moveMult = msg.powers.bm;
-        blue.jumpMult = msg.powers.bj;
-        red.moveMult = msg.powers.rm;
-        red.jumpMult = msg.powers.rj;
-      }
-
-      updateUI();
-      updatePowerUI();
-      updateCrownTimerUI();
-      setNewMatchEnabled(!onlineMatchActive && matchOver);
-
-      // 3) Sync movable crates.
-      if (Array.isArray(msg.crates) && msg.crates.length === crates.length) {
-        msg.crates.forEach((st, i) => {
-          const c = crates[i];
-          Body.setPosition(c, {x: st.x, y: st.y});
-          Body.setAngle(c, st.a);
-          Body.setVelocity(c, {x: st.vx, y: st.vy});
-          Body.setAngularVelocity(c, st.av);
+      // Soft "open pose" springs between non-adjacent limbs so they push apart
+      // instead of clipping through each other (they share a collision group
+      // with their own siblings, so real collisions never trigger between them).
+      _buildAntiPenetrationSprings() {
+        const pairs = [
+          ['leftArm', 'rightArm'], ['leftLeg', 'rightLeg'],
+          ['leftArm', 'leftLeg'], ['rightArm', 'rightLeg'],
+          ['head', 'leftLeg'], ['head', 'rightLeg'],
+        ];
+        return pairs.map(([a, b]) => {
+          const A = this[a], B = this[b];
+          const length = Math.hypot(A.position.x - B.position.x, A.position.y - B.position.y);
+          return Constraint.create({
+            bodyA: A, bodyB: B, length, stiffness: 0.012, damping: 0.15,
+            render: { visible: false }
+          });
         });
       }
 
-      // 4) Sync every ragdoll part and the crown.
-      const all = [...blue.parts, ...red.parts, crown].filter(Boolean);
-      const byId = new Map(all.map(b => [b.id, b]));
-      for (const st of (msg.bodies || [])) {
-        const b = byId.get(st.id);
-        if (!b) continue;
-        Body.setPosition(b, {x: st.x, y: st.y});
-        Body.setAngle(b, st.a);
-        Body.setVelocity(b, {x: st.vx, y: st.vy});
-        Body.setAngularVelocity(b, st.av);
-      }
-
-      if (matchOver) {
-        onlineMatchActive = false;
-        onlineGameStarted = false;
-        setNewMatchEnabled(true);
-      } else if (onlineGameStarted) {
-        setNewMatchEnabled(false);
-      }
-    }
-
-    function sendSnapshotNow() {
-      if (netRole === 'host' && conn && conn.open) conn.send(makeSnapshot());
-    }
-
-    function resetOnlineMatch() {
-      // IMPORTANT: never close/destroy peer/connection here.
-      blueScore = 0;
-      redScore = 0;
-      matchOver = false;
-      onlineMatchActive = true;
-      onlineGameStarted = true;
-      lastFall = 0;
-
-      resetPositions(false); // new map + new powers
-      updateUI();
-      updatePowerUI();
-      updateCrownTimerUI();
-      setNewMatchEnabled(false);
-      setStatus('New online match!', 1800);
-      sendSnapshotNow();
-    }
-
-    function requestNewMatch() {
-      // Button is only enabled once the previous match is over.
-      if (onlineMatchActive || !matchOver) return;
-
-      if (netRole === 'host' && conn && conn.open) {
-        resetOnlineMatch();
-      } else if (netRole === 'client' && conn && conn.open) {
-        conn.send({type: 'new-match-request'});
-      } else if (netRole === 'local') {
-        fullReset();
-      }
-    }
-
-    function showOnlineControls(connected) {
-      const btn = document.getElementById('disconnect-btn');
-      if (btn) btn.style.display = connected ? 'inline-block' : 'none';
-    }
-
-    function setNetStatus(text) {
-      const el = document.getElementById('net-status');
-      if (el) el.textContent = text;
-    }
-
-    function setupConnection(c) {
-      conn = c;
-
-      conn.on('open', () => {
-        showOnlineControls(true);
-        if (netRole === 'host') {
-          setNetStatus('Online host • opponent connected');
-          onlineMatchActive = !matchOver;
-          onlineGameStarted = !matchOver;
-          setNewMatchEnabled(!!matchOver);
-          sendSnapshotNow();
-        } else {
-          setNetStatus('Connected online • you are RED');
-          onlineMatchActive = true;
-          onlineGameStarted = true;
-          setNewMatchEnabled(false);
-          conn.send({type: 'request-state'});
+      removeBody() {
+        if (this.parts.length) {
+          Composite.remove(this.game.world, [...this.parts, ...this.joints, ...this.springs]);
         }
-      });
+        this.parts = []; this.joints = []; this.springs = [];
+        this.head = this.torso = this.leftArm = this.rightArm = this.leftLeg = this.rightLeg = null;
+        this.alive = false;
+      }
 
-      conn.on('data', msg => {
-        if (!msg || typeof msg !== 'object') return;
+      freeze() {
+        for (const b of this.parts) { Body.setVelocity(b, { x: 0, y: 0 }); Body.setAngularVelocity(b, 0); }
+      }
 
-        if (netRole === 'host') {
-          if (msg.type === 'input') {
-            remoteKeys = msg.keys || {};
-          } else if (msg.type === 'new-match-request') {
-            // Joined player can restart after a finished match.
-            if (matchOver) resetOnlineMatch();
-          } else if (msg.type === 'request-state') {
-            sendSnapshotNow();
+      isOnGround() {
+        if (!this.alive) return false;
+        const surfaces = this.game.getSurfacesFor(this);
+        if (Query.collides(this.leftLeg, surfaces).length > 0) return true;
+        if (Query.collides(this.rightLeg, surfaces).length > 0) return true;
+        if (Query.collides(this.torso, surfaces).length > 0) return true;
+        return false;
+      }
+
+      isOutOfBounds() {
+        if (!this.alive) return false;
+        const t = this.torso.position, h = this.head.position;
+        return t.y > 680 || h.y > 680 || t.x < -80 || t.x > WORLD_W + 80 || h.x < -80 || h.x > WORLD_W + 80;
+      }
+
+      applyControl(keyState, keymap) {
+        if (!this.alive) return;
+        const baseMove = 0.018, baseJump = 0.154, slamForce = 0.035;
+        const moveForce = baseMove * (this.moveMult || 1);
+        const jumpForce = baseJump * (this.jumpMult || 1);
+
+        if (keyState[keymap.left]) {
+          Body.applyForce(this.torso, this.torso.position, { x: -moveForce, y: 0 });
+          Body.applyForce(this.head, this.head.position, { x: -moveForce * 0.35, y: 0 });
+          Body.applyForce(this.leftLeg, this.leftLeg.position, { x: -moveForce * 0.25, y: 0 });
+        }
+        if (keyState[keymap.right]) {
+          Body.applyForce(this.torso, this.torso.position, { x: moveForce, y: 0 });
+          Body.applyForce(this.head, this.head.position, { x: moveForce * 0.35, y: 0 });
+          Body.applyForce(this.rightLeg, this.rightLeg.position, { x: moveForce * 0.25, y: 0 });
+        }
+
+        const now = Date.now();
+        if (keyState[keymap.jump] && !this.jumpHeld && this.isOnGround() && (now - this.lastJump > 320)) {
+          Body.applyForce(this.torso, this.torso.position, { x: 0, y: -jumpForce });
+          Body.applyForce(this.head, this.head.position, { x: 0, y: -jumpForce * 0.45 });
+          Body.applyForce(this.leftLeg, this.leftLeg.position, { x: 0, y: -jumpForce * 0.2 });
+          Body.applyForce(this.rightLeg, this.rightLeg.position, { x: 0, y: -jumpForce * 0.2 });
+          this.lastJump = now; this.jumpHeld = true; this.jumpStartedAt = now;
+        }
+        if (!keyState[keymap.jump] && this.jumpHeld) this._cutJump();
+        if (this.jumpHeld && now - this.jumpStartedAt > 180) this.jumpHeld = false;
+
+        if (keyState[keymap.slam]) {
+          Body.applyForce(this.head, this.head.position, { x: 0, y: slamForce });
+          Body.applyForce(this.torso, this.torso.position, { x: 0, y: slamForce * 0.8 });
+        }
+      }
+
+      _cutJump() {
+        if (!this.jumpHeld) return;
+        this.jumpHeld = false;
+        if (Date.now() - this.jumpStartedAt < 180) {
+          for (const part of this.parts) {
+            if (part.velocity.y < -2) Body.setVelocity(part, { x: part.velocity.x, y: Math.max(part.velocity.y, -6.5) });
           }
+        }
+      }
+
+      serialize() {
+        return this.parts.map(b => ({
+          id: b.label, x: b.position.x, y: b.position.y, a: b.angle,
+          vx: b.velocity.x, vy: b.velocity.y, av: b.angularVelocity
+        }));
+      }
+
+      applyPartStates(byLabel) {
+        for (const b of this.parts) {
+          const st = byLabel.get(b.label);
+          if (!st) continue;
+          Body.setPosition(b, { x: st.x, y: st.y });
+          Body.setAngle(b, st.a);
+          Body.setVelocity(b, { x: st.vx, y: st.vy });
+          Body.setAngularVelocity(b, st.av);
+        }
+      }
+    }
+
+    // ========================= CROWN (the "ball") =========================
+    class Crown {
+      constructor(world) {
+        this.world = world;
+        this.body = null;
+        this.holderId = null;
+        this.timer = 0;
+        this.spawn();
+      }
+      spawn() {
+        if (this.body) Composite.remove(this.world, this.body);
+        this.body = Bodies.circle(WORLD_W / 2, 120, 16, {
+          density: 0.0008, friction: 0.3, restitution: 0.6,
+          render: { fillStyle: '#ffd60a', strokeStyle: '#ff9f1c', lineWidth: 3 },
+          label: 'crown'
+        });
+        Composite.add(this.world, this.body);
+        this.holderId = null;
+        this.timer = 0;
+      }
+      reset() { this.spawn(); }
+    }
+
+    // ========================= GAME =========================
+    class Game {
+      constructor(canvas) {
+        this.engine = Engine.create();
+        this.world = this.engine.world;
+        this.engine.gravity.y = 1.25;
+
+        this.render = Render.create({
+          canvas,
+          engine: this.engine,
+          options: { width: WORLD_W, height: WORLD_H, wireframes: false, background: 'transparent', showAngleIndicator: false }
+        });
+
+        this.ground = Bodies.rectangle(WORLD_W / 2, 590, 960, 30, { isStatic: true, render: { fillStyle: '#16213e' }, friction: 0.9 });
+        Composite.add(this.world, [this.ground]);
+
+        this.platforms = [];
+        this.crates = [];
+        this.currentMap = null;
+
+        this.players = new Map();  // id -> RagdollPlayer
+        this.scores = new Map();   // id -> number
+        this.remoteInputs = new Map(); // host-only: id -> keys object from a joined client
+
+        this.matchOver = false;
+        this.lastFall = 0;
+        this.mode = 'local'; // 'local' | 'host' | 'client'
+        this.selfId = 0;     // for client: which id is "you"
+        this.keys = {};
+
+        this.crown = new Crown(this.world);
+        this.net = new NetworkManager(this);
+
+        this._bindInput();
+        this.setupLocalPlayers();
+        this._bindLoop();
+      }
+
+      // ---------- map / crates ----------
+      loadRandomMap() { this.loadMapObj(MAPS[Math.floor(Math.random() * MAPS.length)]); }
+      loadMapObj(map) {
+        this.platforms.forEach(p => Composite.remove(this.world, p));
+        this.platforms = [];
+        map.platforms.forEach(([x, y, w, h, color]) => {
+          const plat = Bodies.rectangle(x, y, w, h, { isStatic: true, render: { fillStyle: color }, friction: 0.8 });
+          this.platforms.push(plat);
+          Composite.add(this.world, plat);
+        });
+        this.currentMap = map;
+      }
+      spawnCrates(positions) {
+        this.crates.forEach(c => Composite.remove(this.world, c));
+        this.crates = [];
+        (positions || this.currentMap.crates).forEach(([x, y]) => {
+          const crate = Bodies.rectangle(x, y, 36, 36, {
+            density: 0.003, friction: 0.6, restitution: 0.2,
+            render: { fillStyle: '#f4a261' }, chamfer: { radius: 4 }
+          });
+          this.crates.push(crate);
+          Composite.add(this.world, crate);
+        });
+      }
+
+      // ---------- players ----------
+      spawnForIndex(idx, n) {
+        if (n <= 1) return this.currentMap.blueSpawn;
+        if (n === 2) return idx === 0 ? this.currentMap.blueSpawn : this.currentMap.redSpawn;
+        const margin = 110, usable = WORLD_W - margin * 2;
+        return [margin + usable * idx / (n - 1), 170];
+      }
+
+      // Creates a player slot if it doesn't exist yet (used on join).
+      ensurePlayer(id) {
+        if (this.players.has(id)) return this.players.get(id);
+        const n = this.players.size + 1;
+        const ids = [...this.players.keys(), id].sort((a, b) => a - b);
+        const idx = ids.indexOf(id);
+        const [x, y] = this.spawnForIndex(idx, n);
+        const color = PLAYER_COLORS[id % PLAYER_COLORS.length];
+        const p = new RagdollPlayer(this, id, x, y, color);
+        this.players.set(id, p);
+        if (!this.scores.has(id)) this.scores.set(id, 0);
+        this.updateScoreboardUI();
+        return p;
+      }
+
+      // Fully erases a player's body and removes them from the room/scoreboard.
+      // Used on disconnect — only that player's body/record is touched.
+      removePlayer(id) {
+        const p = this.players.get(id);
+        if (!p) return;
+        p.removeBody();
+        this.players.delete(id);
+        this.scores.delete(id);
+        this.remoteInputs.delete(id);
+        this.updateScoreboardUI();
+      }
+
+      setupLocalPlayers() {
+        for (const p of this.players.values()) p.removeBody();
+        this.players.clear();
+        this.scores.clear();
+        this.matchOver = false;
+        this.mode = 'local';
+        this.loadRandomMap();
+        this.spawnCrates();
+        this.ensurePlayer(0);
+        this.ensurePlayer(1);
+        this.randomizePowers(true);
+        this.crown.reset();
+        this.setStatus('Local 2-player! First to 5 wins • WASD vs Arrows', 3000);
+        ui.setNewMatchEnabled(false);
+        this.updateScoreboardUI();
+      }
+
+      randomizePowers(all) {
+        const ids = all ? [...this.players.keys()] : [...this.players.keys()];
+        ids.forEach(id => {
+          const p = this.players.get(id);
+          p.moveMult = 0.75 + Math.random() * 0.50;
+          p.jumpMult = 0.85 + Math.random() * 0.55;
+        });
+      }
+
+      getSurfacesFor(player) {
+        let surfaces = [...this.platforms, this.ground, ...this.crates];
+        for (const p of this.players.values()) if (p !== player && p.alive) surfaces = surfaces.concat(p.parts);
+        return surfaces;
+      }
+
+      // ---------- rounds / scoring ----------
+      resetRound(newMap = true) {
+        if (newMap) { this.loadRandomMap(); this.spawnCrates(); }
+        const ids = [...this.players.keys()].sort((a, b) => a - b);
+        ids.forEach((id, idx) => {
+          const p = this.players.get(id);
+          const [x, y] = this.spawnForIndex(idx, ids.length);
+          p.spawnBody(x, y);
+          if (newMap) { p.moveMult = 0.75 + Math.random() * 0.50; p.jumpMult = 0.85 + Math.random() * 0.55; }
+        });
+        this.crown.reset();
+        this.updateScoreboardUI();
+        if (newMap) this.setStatus(`🗺 ${this.currentMap.name}`, 2500);
+      }
+
+      newMatch() {
+        for (const id of this.scores.keys()) this.scores.set(id, 0);
+        this.matchOver = false;
+        this.resetRound(true);
+        this.setStatus('New match! First to 5 wins!', 2000);
+        ui.setNewMatchEnabled(false);
+        this.net.broadcastIfHost(this.makeSnapshot());
+      }
+
+      addScore(id, delta) {
+        const s = (this.scores.get(id) || 0) + delta;
+        this.scores.set(id, s);
+        this.updateScoreboardUI();
+        if (s >= SCORE_TO_WIN && !this.matchOver) {
+          this.matchOver = true;
+          this.setStatus(`${this.displayName(id)} WINS THE MATCH!`, 0);
+          ui.setNewMatchEnabled(true);
+        }
+      }
+
+      checkFalls() {
+        const now = Date.now();
+        if (now - this.lastFall < FALL_DEBOUNCE) return;
+        const fallen = [...this.players.values()].filter(p => p.alive && p.isOutOfBounds());
+        if (!fallen.length) return;
+        this.lastFall = now;
+        fallen.forEach(p => p.removeBody()); // eliminated for the rest of the round
+
+        const remaining = [...this.players.values()].filter(p => p.alive);
+        if (remaining.length <= 1) {
+          const winner = remaining[0];
+          if (winner) {
+            this.addScore(winner.id, 1);
+            this.setStatus(`🏆 ${this.displayName(winner.id)} is the last one standing! +1`);
+          } else {
+            this.setStatus('💥 Double knockout!');
+          }
+          if (!this.matchOver) setTimeout(() => this.resetRound(true), 900);
+        } else {
+          this.setStatus(`${fallen.map(p => this.displayName(p.id)).join(', ')} eliminated!`);
+        }
+      }
+
+      updateCrown(dt) {
+        if (this.matchOver) { this.updateCrownTimerUI(); return; }
+        const touchers = [];
+        for (const p of this.players.values()) {
+          if (!p.alive) continue;
+          if (Query.collides(this.crown.body, p.parts).length > 0) touchers.push(p.id);
+        }
+        if (touchers.length > 1) {
+          if (this.crown.holderId !== null) { this.crown.holderId = null; this.crown.timer = 0; this.setStatus('⚔️ Contested!'); }
+        } else if (touchers.length === 1) {
+          const id = touchers[0];
+          if (this.crown.holderId !== id) { this.crown.holderId = id; this.crown.timer = 0; this.setStatus(`${this.displayName(id)} grabbed the crown!`); }
+        }
+
+        if (this.crown.holderId !== null) {
+          this.crown.timer += dt;
+          if (this.crown.timer >= CROWN_HOLD_TIME) {
+            const id = this.crown.holderId;
+            this.crown.timer = 0; this.crown.holderId = null;
+            Body.setVelocity(this.crown.body, { x: (Math.random() - 0.5) * 18, y: -14 });
+            this.addScore(id, 1);
+            this.setStatus(`👑 ${this.displayName(id)} held the crown! +1`);
+          }
+        }
+
+        const cb = this.crown.body.position;
+        if (cb.y > 700 || cb.x < -100 || cb.x > WORLD_W + 100) {
+          Body.setPosition(this.crown.body, { x: WORLD_W / 2, y: 80 });
+          Body.setVelocity(this.crown.body, { x: 0, y: 0 });
+          this.crown.holderId = null; this.crown.timer = 0;
+        }
+        this.updateCrownTimerUI();
+      }
+
+      // ---------- UI helpers ----------
+      displayName(id) {
+        if (this.mode === 'client') return id === this.selfId ? 'You' : `Player ${id + 1}`;
+        if (this.mode === 'host') return id === 0 ? 'You (Host)' : `Player ${id + 1}`;
+        return id === 0 ? 'Player 1' : 'Player 2';
+      }
+
+      setStatus(msg, duration = 2000) {
+        const el = document.getElementById('status');
+        el.textContent = msg;
+        if (duration) {
+          setTimeout(() => {
+            if (this.matchOver) return;
+            const holderId = this.crown.holderId;
+            el.textContent = (holderId !== null && holderId !== undefined && this.players.has(holderId))
+              ? `${this.displayName(holderId)} has the crown!` : 'Fight!';
+          }, duration);
+        }
+      }
+
+      updateScoreboardUI() {
+        const el = document.getElementById('scoreboard');
+        if (!el) return;
+        const ids = [...this.players.keys()].sort((a, b) => a - b);
+        el.innerHTML = ids.map(id => {
+          const p = this.players.get(id);
+          const score = this.scores.get(id) || 0;
+          const name = this.displayName(id);
+          const color = p ? p.color : '#888';
+          const opacity = (p && !p.alive) ? 'opacity:.45;' : '';
+          return `<div class="score-chip" style="border-color:${color};color:${color};${opacity}">` +
+                 `<span class="dot" style="background:${color}"></span>${name}: ${score}</div>`;
+        }).join('');
+      }
+
+      updateCrownTimerUI() {
+        const el = document.getElementById('crown-timer');
+        const holderId = this.crown.holderId;
+        if (holderId === null || holderId === undefined || !this.players.has(holderId)) {
+          el.style.display = 'none';
           return;
         }
+        const holder = this.players.get(holderId);
+        const remaining = Math.max(0, CROWN_HOLD_TIME - this.crown.timer);
+        el.style.display = 'block';
+        el.textContent = remaining.toFixed(1);
+        el.style.color = holder.color;
+        el.style.borderColor = holder.color + 'aa';
+      }
 
-        // Joined/client receives only authoritative state from host.
-        if (netRole === 'client' && msg.type === 'state') {
-          applySnapshot(msg);
+      // ---------- input ----------
+      _bindInput() {
+        window.addEventListener('keydown', e => {
+          this.keys[e.code] = true;
+          if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) e.preventDefault();
+        });
+        window.addEventListener('blur', () => { for (const k in this.keys) this.keys[k] = false; });
+        window.addEventListener('keyup', e => { this.keys[e.code] = false; });
+      }
+      getArrowKeys() {
+        return {
+          ArrowLeft: !!this.keys.ArrowLeft, ArrowRight: !!this.keys.ArrowRight,
+          ArrowUp: !!this.keys.ArrowUp, ArrowDown: !!this.keys.ArrowDown
+        };
+      }
+
+      // ---------- networking snapshots ----------
+      makeSnapshot() {
+        const bodies = [];
+        for (const p of this.players.values()) bodies.push(...p.serialize());
+        if (this.crown.body) {
+          bodies.push({
+            id: 'crown', x: this.crown.body.position.x, y: this.crown.body.position.y, a: this.crown.body.angle,
+            vx: this.crown.body.velocity.x, vy: this.crown.body.velocity.y, av: this.crown.body.angularVelocity
+          });
         }
-      });
+        return {
+          type: 'state',
+          mapIndex: MAPS.indexOf(this.currentMap),
+          roster: [...this.players.values()].map(p => ({ id: p.id, color: p.color, alive: p.alive, moveMult: p.moveMult, jumpMult: p.jumpMult })),
+          scores: Object.fromEntries(this.scores),
+          matchOver: this.matchOver,
+          crownHolder: this.crown.holderId,
+          crownTimer: this.crown.timer,
+          crates: this.crates.map(c => ({ x: c.position.x, y: c.position.y, a: c.angle, vx: c.velocity.x, vy: c.velocity.y, av: c.angularVelocity })),
+          bodies
+        };
+      }
 
-      conn.on('close', () => {
-        setNetStatus('Opponent disconnected');
-        showOnlineControls(false);
-        conn = null;
-        netRole = 'local';
-        remoteKeys = {};
-        onlineMatchActive = false;
-        onlineGameStarted = false;
-        setNewMatchEnabled(true);
-      });
+      applySnapshot(msg) {
+        const map = MAPS[msg.mapIndex] || MAPS[0];
+        if (this.currentMap !== map) { this.loadMapObj(map); this.spawnCrates(); }
 
-      conn.on('error', err => {
-        setNetStatus('Network error: ' + (err.type || err.message || 'unknown'));
-      });
-    }
+        this.scores = new Map(Object.entries(msg.scores || {}).map(([k, v]) => [Number(k), v]));
+        this.matchOver = !!msg.matchOver;
+        this.crown.holderId = (msg.crownHolder === undefined) ? null : msg.crownHolder;
+        this.crown.timer = Number(msg.crownTimer) || 0;
 
-    function loadPeerJS() {
-      if (window.Peer) return Promise.resolve(window.Peer);
-      if (peerLoader) return peerLoader;
+        const incomingIds = new Set((msg.roster || []).map(r => r.id));
+        for (const id of [...this.players.keys()]) {
+          if (!incomingIds.has(id)) { this.players.get(id).removeBody(); this.players.delete(id); }
+        }
+        for (const r of (msg.roster || [])) {
+          let p = this.players.get(r.id);
+          if (!p) { p = new RagdollPlayer(this, r.id, WORLD_W / 2, -300, r.color); p.removeBody(); this.players.set(r.id, p); }
+          p.color = r.color; p.moveMult = r.moveMult; p.jumpMult = r.jumpMult;
+          if (r.alive && p.parts.length === 0) p.spawnBody(WORLD_W / 2, -300);
+          if (!r.alive && p.parts.length > 0) p.removeBody();
+        }
 
-      peerLoader = new Promise((resolve, reject) => {
-        const s = document.createElement('script');
-        s.src = 'https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js';
-        s.async = true;
-        s.onload = () => window.Peer
-          ? resolve(window.Peer)
-          : reject(new Error('PeerJS loaded but Peer is unavailable'));
-        s.onerror = () => reject(new Error('Could not load PeerJS'));
-        document.head.appendChild(s);
-      });
-      return peerLoader;
-    }
+        if (Array.isArray(msg.crates) && msg.crates.length === this.crates.length) {
+          msg.crates.forEach((st, i) => {
+            const c = this.crates[i];
+            Body.setPosition(c, { x: st.x, y: st.y }); Body.setAngle(c, st.a);
+            Body.setVelocity(c, { x: st.vx, y: st.vy }); Body.setAngularVelocity(c, st.av);
+          });
+        }
 
-    async function hostOnline() {
-      disconnectOnline();
-      setNetStatus('Loading online multiplayer…');
-      try {
-        const PeerClass = await loadPeerJS();
-        netRole = 'host';
-        peer = new PeerClass();
-        peer.on('open', id => {
-          document.getElementById('room-id').value = id;
-          setNetStatus('Hosting • share this Host ID with your opponent');
+        const byLabel = new Map((msg.bodies || []).map(b => [b.id, b]));
+        for (const p of this.players.values()) p.applyPartStates(byLabel);
+        if (this.crown.body) {
+          const st = byLabel.get('crown');
+          if (st) {
+            Body.setPosition(this.crown.body, { x: st.x, y: st.y });
+            Body.setAngle(this.crown.body, st.a);
+          }
+        }
+
+        this.updateScoreboardUI();
+        this.updateCrownTimerUI();
+        ui.setNewMatchEnabled(this.matchOver);
+      }
+
+      // ---------- main loop ----------
+      _bindLoop() {
+        this._lastTime = performance.now();
+        Events.on(this.engine, 'beforeUpdate', () => {
+          if (this.matchOver) return;
+          const now = performance.now();
+          const dt = Math.min(0.05, (now - this._lastTime) / 1000);
+          this._lastTime = now;
+
+          if (this.mode === 'client') {
+            for (const p of this.players.values()) p.freeze();
+            if (this.crown.body) { Body.setVelocity(this.crown.body, { x: 0, y: 0 }); Body.setAngularVelocity(this.crown.body, 0); }
+            for (const c of this.crates) { Body.setVelocity(c, { x: 0, y: 0 }); Body.setAngularVelocity(c, 0); }
+            return;
+          }
+
+          for (const p of this.players.values()) {
+            const keymap = p.id === 0 ? KEYMAP_WASD : KEYMAP_ARROWS;
+            const keyState = (this.mode === 'host' && p.id !== 0) ? (this.remoteInputs.get(p.id) || {}) : this.keys;
+            p.applyControl(keyState, keymap);
+          }
+          this.checkFalls();
+          this.updateCrown(dt);
+
+          if (this.mode === 'host') {
+            this.net.snapshotClock += dt;
+            if (this.net.snapshotClock >= 0.033) { this.net.snapshotClock = 0; this.net.broadcastIfHost(this.makeSnapshot()); }
+          }
         });
-        peer.on('connection', c => {
-          setupConnection(c);
-          setStatus('Opponent connected!', 1800);
+
+        Events.on(this.render, 'afterRender', () => {
+          const holderId = this.crown.holderId;
+          if (!this.crown.body || holderId === null || holderId === undefined) return;
+          const holder = this.players.get(holderId);
+          if (!holder) return;
+          const ctx = this.render.context;
+          ctx.beginPath();
+          ctx.arc(this.crown.body.position.x, this.crown.body.position.y, 22, 0, Math.PI * 2);
+          ctx.fillStyle = holder.color + '40';
+          ctx.fill();
         });
-        peer.on('error', err => setNetStatus('Peer error: ' + (err.type || err.message)));
-      } catch (err) {
-        netRole = 'local';
-        setNetStatus(err.message);
+
+        Render.run(this.render);
+        Runner.run(Runner.create(), this.engine);
       }
     }
 
-    async function joinOnline() {
+    // ========================= NETWORKING =========================
+    class NetworkManager {
+      constructor(game) {
+        this.game = game;
+        this.peer = null;
+        this.role = 'local'; // local | host | client
+        this.connections = new Map(); // host: playerId -> DataConnection
+        this.conn = null;             // client: DataConnection to host
+        this.nextPlayerId = 1;
+        this.snapshotClock = 0;
+        this.peerLoader = null;
+        this.inputInterval = null;
+      }
+
+      async _loadPeerJS() {
+        if (window.Peer) return window.Peer;
+        if (this.peerLoader) return this.peerLoader;
+        this.peerLoader = new Promise((resolve, reject) => {
+          const s = document.createElement('script');
+          s.src = 'https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js';
+          s.async = true;
+          s.onload = () => window.Peer ? resolve(window.Peer) : reject(new Error('PeerJS loaded but Peer is unavailable'));
+          s.onerror = () => reject(new Error('Could not load PeerJS'));
+          document.head.appendChild(s);
+        });
+        return this.peerLoader;
+      }
+
+      async hostRoom() {
+        this.disconnect(false);
+        ui.setNetStatus('Loading online multiplayer…');
+        try {
+          const PeerClass = await this._loadPeerJS();
+          this.role = 'host';
+          this.game.mode = 'host';
+          this.nextPlayerId = 1;
+
+          // Reset the room to just the host (id 0) as player one.
+          for (const p of this.game.players.values()) p.removeBody();
+          this.game.players.clear(); this.game.scores.clear();
+          this.game.matchOver = false;
+          this.game.loadRandomMap(); this.game.spawnCrates();
+          this.game.ensurePlayer(0);
+          this.game.randomizePowers(true);
+          this.game.crown.reset();
+
+          this.peer = new PeerClass();
+          this.peer.on('open', id => {
+            document.getElementById('room-id').value = id;
+            ui.setNetStatus(`Hosting • share this Host ID • 1/${MAX_PLAYERS} players`);
+          });
+          this.peer.on('connection', c => this._acceptConnection(c));
+          this.peer.on('error', err => ui.setNetStatus('Peer error: ' + (err.type || err.message)));
+          ui.showOnlineControls(true);
+          ui.setNewMatchEnabled(false);
+          this.game.setStatus('Hosting online! Waiting for players…', 2500);
+        } catch (err) {
+          this.role = 'local'; this.game.mode = 'local';
+          ui.setNetStatus(err.message);
+        }
+      }
+
+      _acceptConnection(c) {
+        if (this.connections.size + 1 >= MAX_PLAYERS) {
+          c.on('open', () => { c.send({ type: 'full' }); setTimeout(() => { try { c.close(); } catch (_) {} }, 200); });
+          return;
+        }
+        const id = this.nextPlayerId++;
+        this.connections.set(id, c);
+        c.on('open', () => {
+          this.game.ensurePlayer(id);
+          c.send({ type: 'welcome', yourId: id });
+          this.game.setStatus(`${this.game.displayName(id)} connected!`, 1800);
+          this.broadcastIfHost(this.game.makeSnapshot());
+          ui.setNetStatus(`Hosting • ${this.connections.size + 1}/${MAX_PLAYERS} players`);
+        });
+        c.on('data', msg => {
+          if (!msg || typeof msg !== 'object') return;
+          if (msg.type === 'input') {
+            this.game.remoteInputs.set(id, msg.keys || {});
+          } else if (msg.type === 'new-match-request') {
+            if (this.game.matchOver) this.game.newMatch();
+          } else if (msg.type === 'request-state') {
+            if (c.open) c.send(this.game.makeSnapshot());
+          }
+        });
+        c.on('close', () => this._dropConnection(id));
+        c.on('error', () => this._dropConnection(id));
+      }
+
+      // Disconnect: erase ONLY that joined player's body/score — nobody else is affected.
+      _dropConnection(id) {
+        if (!this.connections.has(id)) return;
+        this.connections.delete(id);
+        this.game.removePlayer(id);
+        this.game.setStatus(`Player ${id + 1} disconnected`, 1800);
+        this.broadcastIfHost(this.game.makeSnapshot());
+        ui.setNetStatus(`Hosting • ${this.connections.size + 1}/${MAX_PLAYERS} players`);
+      }
+
+      _broadcast(msg) { for (const c of this.connections.values()) if (c.open) c.send(msg); }
+      broadcastIfHost(msg) { if (this.role === 'host') this._broadcast(msg); }
+
+      async joinRoom(hostId) {
+        if (!hostId) { ui.setNetStatus('Enter the host ID first'); return; }
+        this.disconnect(false);
+        ui.setNetStatus('Loading online multiplayer…');
+        try {
+          const PeerClass = await this._loadPeerJS();
+          this.role = 'client';
+          this.game.mode = 'client';
+          this.peer = new PeerClass();
+          this.peer.on('open', () => {
+            this.conn = this.peer.connect(hostId, { reliable: false, serialization: 'json' });
+            this._setupClientConn();
+          });
+          this.peer.on('error', err => ui.setNetStatus('Peer error: ' + (err.type || err.message)));
+        } catch (err) {
+          this.role = 'local'; this.game.mode = 'local';
+          ui.setNetStatus(err.message);
+        }
+      }
+
+      _setupClientConn() {
+        const c = this.conn;
+        c.on('open', () => {
+          ui.setNetStatus('Connected online…');
+          ui.showOnlineControls(true);
+          ui.setNewMatchEnabled(false);
+          c.send({ type: 'request-state' });
+        });
+        c.on('data', msg => {
+          if (!msg || typeof msg !== 'object') return;
+          if (msg.type === 'welcome') {
+            this.game.selfId = msg.yourId;
+            ui.setNetStatus(`Connected online • you are Player ${msg.yourId + 1}`);
+          } else if (msg.type === 'full') {
+            ui.setNetStatus('Room is full (10/10 players)');
+            this.disconnect();
+          } else if (msg.type === 'state') {
+            this.game.applySnapshot(msg);
+          }
+        });
+        c.on('close', () => { ui.setNetStatus('Disconnected from host'); this.disconnect(); });
+        c.on('error', err => ui.setNetStatus('Network error: ' + (err.type || err.message)));
+
+        if (this.inputInterval) clearInterval(this.inputInterval);
+        this.inputInterval = setInterval(() => {
+          if (this.role === 'client' && c.open) c.send({ type: 'input', keys: this.game.getArrowKeys() });
+        }, 30);
+      }
+
+      requestNewMatch() {
+        if (this.role === 'host') { if (this.game.matchOver) this.game.newMatch(); }
+        else if (this.role === 'client') { if (this.conn && this.conn.open) this.conn.send({ type: 'new-match-request' }); }
+        else { this.game.newMatch(); }
+      }
+
+      disconnect(resetToLocal = true) {
+        for (const c of this.connections.values()) { try { c.close(); } catch (_) {} }
+        this.connections.clear();
+        if (this.conn) { try { this.conn.close(); } catch (_) {} }
+        if (this.peer) { try { this.peer.destroy(); } catch (_) {} }
+        if (this.inputInterval) { clearInterval(this.inputInterval); this.inputInterval = null; }
+        this.conn = null; this.peer = null;
+        this.role = 'local';
+        this.nextPlayerId = 1;
+        this.game.remoteInputs.clear();
+        if (resetToLocal) {
+          this.game.setupLocalPlayers();
+          ui.showOnlineControls(false);
+          ui.setNetStatus('Local 2-player');
+        }
+      }
+    }
+
+    // ========================= UI WIRING =========================
+    const ui = {
+      setNetStatus(text) { document.getElementById('net-status').textContent = text; },
+      showOnlineControls(connected) { document.getElementById('disconnect-btn').style.display = connected ? 'inline-block' : 'none'; },
+      setNewMatchEnabled(enabled) { document.getElementById('new-match-btn').disabled = !enabled; }
+    };
+
+    const canvas = document.getElementById('world');
+    const game = new Game(canvas);
+
+    document.getElementById('new-match-btn').addEventListener('click', () => game.net.requestNewMatch());
+    document.getElementById('host-btn').addEventListener('click', () => game.net.hostRoom());
+    document.getElementById('join-btn').addEventListener('click', () => {
       const id = document.getElementById('room-id').value.trim();
-      if (!id) return setNetStatus('Enter the host ID first');
-      disconnectOnline();
-      setNetStatus('Loading online multiplayer…');
-      try {
-        const PeerClass = await loadPeerJS();
-        netRole = 'client';
-        peer = new PeerClass();
-        peer.on('open', () => setupConnection(peer.connect(id, {
-          reliable: false,
-          serialization: 'json'
-        })));
-        peer.on('error', err => setNetStatus('Peer error: ' + (err.type || err.message)));
-      } catch (err) {
-        netRole = 'local';
-        setNetStatus(err.message);
-      }
-    }
-
-    function disconnectOnline() {
-      if (conn) { try { conn.close(); } catch (_) {} }
-      if (peer) { try { peer.destroy(); } catch (_) {} }
-      conn = null;
-      peer = null;
-      netRole = 'local';
-      remoteKeys = {};
-      onlineMatchActive = false;
-      onlineGameStarted = false;
-      showOnlineControls(false);
-      setNetStatus('Local 2-player');
-    }
-
-    // Send joined player's arrow-key state frequently enough for responsive control.
-    setInterval(() => {
-      if (netRole === 'client' && conn && conn.open) {
-        conn.send({type: 'input', keys: getOnlineKeys()});
-      }
-    }, 30);
-
-    // ========== MAIN LOOP ==========
-    let lastTime = performance.now();
-    Events.on(engine, 'beforeUpdate', () => {
-      if (matchOver) return;
-
-      const now = performance.now();
-      const dt = Math.min(0.05, (now - lastTime) / 1000);
-      lastTime = now;
-
-      if (netRole === 'host') {
-        // Host owns the authoritative physics. BOTH online players use arrows.
-        control(blue, 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', keys);
-        control(red, 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', remoteKeys);
-        checkFall();
-        updateCrown(dt);
-
-        snapshotClock += dt;
-        if (snapshotClock >= 0.033) {
-          snapshotClock = 0;
-          sendSnapshotNow();
-        }
-      } else if (netRole === 'client') {
-        // Joined client is a VIEWER of authoritative physics. Freeze dynamic bodies
-        // between snapshots so its Matter.js simulation cannot diverge from host.
-        [...blue.parts, ...red.parts, ...crates, crown].filter(Boolean).forEach(b => {
-          Body.setVelocity(b, {x: 0, y: 0});
-          Body.setAngularVelocity(b, 0);
-        });
-      } else {
-        // Original local controls remain unchanged.
-        control(blue, 'KeyA', 'KeyD', 'KeyW', 'KeyS', keys);
-        control(red, 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', keys);
-        checkFall();
-        updateCrown(dt);
-      }
+      game.net.joinRoom(id);
     });
+    document.getElementById('disconnect-btn').addEventListener('click', () => game.net.disconnect(true));
 
-    // Visual polish – make crown glow a bit by changing color when held
-    Events.on(render, 'afterRender', () => {
-      if (!crown) return;
-      const ctx = render.context;
-      if (crownHolder === 'blue') {
-        ctx.beginPath();
-        ctx.arc(crown.position.x, crown.position.y, 22, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(76, 201, 240, 0.25)';
-        ctx.fill();
-      } else if (crownHolder === 'red') {
-        ctx.beginPath();
-        ctx.arc(crown.position.x, crown.position.y, 22, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(247, 37, 133, 0.25)';
-        ctx.fill();
-      }
-    });
-
-    Render.run(render);
-    Runner.run(Runner.create(), engine);
-
-    // Start message
-    randomizePowers(); // initial powers for both players
-    onlineMatchActive = false;
-    onlineGameStarted = true;
-    setNewMatchEnabled(false);
-    setStatus('First to 5 • Random maps & powers every round!', 3500);
-    setNewMatchEnabled(false);
+    game.setStatus('First to 5 • Last one standing or hold the crown 5s!', 3500);
+  })();
   </script>
 </body>
 </html>
