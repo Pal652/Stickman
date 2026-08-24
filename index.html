@@ -760,33 +760,66 @@
     }
 
     // ========== ONLINE MULTIPLAYER ==========
-    // PeerJS provides WebRTC signaling. The host is authoritative for physics.
+    // Host owns the only authoritative Matter.js simulation.
     let peer = null;
     let conn = null;
     let netRole = 'local'; // local | host | client
     let remoteKeys = {};
     let snapshotClock = 0;
+    let onlineMatchActive = false;
+    let onlineGameStarted = false;
+    let peerLoader = null;
 
     function setNetStatus(text) {
       document.getElementById('net-status').textContent = text;
     }
 
-    if (location.protocol === 'file:') {
-      setNetStatus('Local 2-player works here. For Online, serve this file from http:// or https://');
+    function setNewMatchEnabled(enabled) {
+      const btn = document.getElementById('new-match-btn');
+      if (btn) btn.disabled = !enabled;
     }
 
-    function showOnlineControls(connected) {
-      document.getElementById('disconnect-btn').style.display = connected ? 'inline-block' : 'none';
+    function getOnlineKeys() {
+      // Both online players use arrow keys. Host = BLUE, joined = RED.
+      return {
+        ArrowLeft: !!keys.ArrowLeft,
+        ArrowRight: !!keys.ArrowRight,
+        ArrowUp: !!keys.ArrowUp,
+        ArrowDown: !!keys.ArrowDown
+      };
+    }
+
+    function serializeBodies() {
+      return [...blue.parts, ...red.parts, crown].filter(Boolean).map(b => ({
+        id: b.id,
+        x: b.position.x, y: b.position.y,
+        a: b.angle,
+        vx: b.velocity.x, vy: b.velocity.y,
+        av: b.angularVelocity
+      }));
+    }
+
+    function serializeCrates() {
+      return crates.map(c => ({
+        x: c.position.x, y: c.position.y,
+        a: c.angle,
+        vx: c.velocity.x, vy: c.velocity.y,
+        av: c.angularVelocity
+      }));
     }
 
     function makeSnapshot() {
-      const bodies = [...blue.parts, ...red.parts, crown].filter(Boolean).map(b => ({
-        id: b.id, x: b.position.x, y: b.position.y,
-        a: b.angle, vx: b.velocity.x, vy: b.velocity.y, av: b.angularVelocity
-      }));
       return {
-        type: 'state', bodies, blueScore, redScore, matchOver,
-        onlineGameStarted, crownHolder, crownTimer, mapIndex: maps.indexOf(currentMap),
+        type: 'state',
+        mapIndex: maps.indexOf(currentMap),
+        bodies: serializeBodies(),
+        crates: serializeCrates(),
+        blueScore,
+        redScore,
+        matchOver,
+        onlineGameStarted,
+        crownHolder,
+        crownTimer,
         powers: {
           bm: blue.moveMult, bj: blue.jumpMult,
           rm: red.moveMult, rj: red.jumpMult
@@ -795,161 +828,159 @@
     }
 
     function applySnapshot(msg) {
-      blueScore = msg.blueScore;
-      redScore = msg.redScore;
-      matchOver = msg.matchOver;
-      onlineMatchActive = !!msg.onlineGameStarted;
+      // 1) Level is authoritative too.
+      const map = maps[msg.mapIndex] || maps[0];
+      if (currentMap !== map) {
+        loadMap(map);
+        spawnCrates(map.crates);
+      }
+
+      // 2) Score/counter is authoritative, so joined always sees it.
+      blueScore = Number(msg.blueScore) || 0;
+      redScore = Number(msg.redScore) || 0;
+      matchOver = !!msg.matchOver;
       onlineGameStarted = !!msg.onlineGameStarted;
-      if (matchOver) endOnlineMatch();
-      else setNewMatchEnabled(false);
-      crownHolder = msg.crownHolder;
-      crownTimer = msg.crownTimer;
-      blue.moveMult = msg.powers.bm; blue.jumpMult = msg.powers.bj;
-      red.moveMult = msg.powers.rm; red.jumpMult = msg.powers.rj;
+      onlineMatchActive = onlineGameStarted;
+
+      crownHolder = msg.crownHolder || null;
+      crownTimer = Number(msg.crownTimer) || 0;
+
+      if (msg.powers) {
+        blue.moveMult = msg.powers.bm;
+        blue.jumpMult = msg.powers.bj;
+        red.moveMult = msg.powers.rm;
+        red.jumpMult = msg.powers.rj;
+      }
+
       updateUI();
       updatePowerUI();
+      updateCrownTimerUI();
+      setNewMatchEnabled(!onlineMatchActive && matchOver);
 
+      // 3) Sync movable crates.
+      if (Array.isArray(msg.crates) && msg.crates.length === crates.length) {
+        msg.crates.forEach((st, i) => {
+          const c = crates[i];
+          Body.setPosition(c, {x: st.x, y: st.y});
+          Body.setAngle(c, st.a);
+          Body.setVelocity(c, {x: st.vx, y: st.vy});
+          Body.setAngularVelocity(c, st.av);
+        });
+      }
+
+      // 4) Sync every ragdoll part and the crown.
       const all = [...blue.parts, ...red.parts, crown].filter(Boolean);
       const byId = new Map(all.map(b => [b.id, b]));
-      for (const st of msg.bodies) {
+      for (const st of (msg.bodies || [])) {
         const b = byId.get(st.id);
         if (!b) continue;
-        Body.setPosition(b, { x: st.x, y: st.y });
+        Body.setPosition(b, {x: st.x, y: st.y});
         Body.setAngle(b, st.a);
-        Body.setVelocity(b, { x: st.vx, y: st.vy });
+        Body.setVelocity(b, {x: st.vx, y: st.vy});
         Body.setAngularVelocity(b, st.av);
+      }
+
+      if (matchOver) {
+        onlineMatchActive = false;
+        onlineGameStarted = false;
+        setNewMatchEnabled(true);
+      } else if (onlineGameStarted) {
+        setNewMatchEnabled(false);
+      }
+    }
+
+    function sendSnapshotNow() {
+      if (netRole === 'host' && conn && conn.open) conn.send(makeSnapshot());
+    }
+
+    function resetOnlineMatch() {
+      // IMPORTANT: never close/destroy peer/connection here.
+      blueScore = 0;
+      redScore = 0;
+      matchOver = false;
+      onlineMatchActive = true;
+      onlineGameStarted = true;
+      lastFall = 0;
+
+      resetPositions(false); // new map + new powers
+      updateUI();
+      updatePowerUI();
+      updateCrownTimerUI();
+      setNewMatchEnabled(false);
+      setStatus('New online match!', 1800);
+      sendSnapshotNow();
+    }
+
+    function requestNewMatch() {
+      // Button is only enabled once the previous match is over.
+      if (onlineMatchActive || !matchOver) return;
+
+      if (netRole === 'host' && conn && conn.open) {
+        resetOnlineMatch();
+      } else if (netRole === 'client' && conn && conn.open) {
+        conn.send({type: 'new-match-request'});
+      } else if (netRole === 'local') {
+        fullReset();
       }
     }
 
     function setupConnection(c) {
       conn = c;
+
       conn.on('open', () => {
         showOnlineControls(true);
         if (netRole === 'host') {
           setNetStatus('Online host • opponent connected');
-          onlineMatchActive = true;
-          onlineGameStarted = true;
-          setNewMatchEnabled(false);
-          conn.send({
-            type: 'init',
-            mapIndex: maps.indexOf(currentMap),
-            powers: {
-              bm: blue.moveMult, bj: blue.jumpMult,
-              rm: red.moveMult, rj: red.jumpMult
-            },
-            blueScore, redScore, matchOver,
-            onlineGameStarted
-          });
+          onlineMatchActive = !matchOver;
+          onlineGameStarted = !matchOver;
+          setNewMatchEnabled(!!matchOver);
+          sendSnapshotNow();
         } else {
           setNetStatus('Connected online • you are RED');
           onlineMatchActive = true;
+          onlineGameStarted = true;
           setNewMatchEnabled(false);
+          conn.send({type: 'request-state'});
         }
       });
+
       conn.on('data', msg => {
-        if (netRole === 'host' && msg.type === 'input') {
-          remoteKeys = msg.keys || {};
-        } else if (netRole === 'host' && msg.type === 'new-match-request') {
-          // Do NOT recreate/destroy PeerJS. Only reset the game state.
-          startOnlineMatchFromHost();
-        } else if (netRole === 'client' && msg.type === 'init') {
-          loadMap(maps[msg.mapIndex] || maps[0]);
-          spawnCrates(currentMap.crates);
-          blue.moveMult = msg.powers.bm; blue.jumpMult = msg.powers.bj;
-          red.moveMult = msg.powers.rm; red.jumpMult = msg.powers.rj;
-          blueScore = msg.blueScore || 0;
-          redScore = msg.redScore || 0;
-          matchOver = !!msg.matchOver;
-          onlineMatchActive = !!msg.onlineGameStarted;
-          onlineGameStarted = !!msg.onlineGameStarted;
-          updateUI();
-          updatePowerUI();
-          if (onlineGameStarted) setNewMatchEnabled(false);
-        } else if (netRole === 'client' && msg.type === 'match-start') {
-          loadMap(maps[msg.mapIndex] || maps[0]);
-          spawnCrates(currentMap.crates);
-          blue.moveMult = msg.powers.bm; blue.jumpMult = msg.powers.bj;
-          red.moveMult = msg.powers.rm; red.jumpMult = msg.powers.rj;
-          blueScore = 0;
-          redScore = 0;
-          matchOver = false;
-          onlineMatchActive = true;
-          onlineGameStarted = true;
-          updateUI();
-          updatePowerUI();
-          setNewMatchEnabled(false);
-          setStatus('New online match!', 1800);
-        } else if (netRole === 'client' && msg.type === 'state') {
+        if (!msg || typeof msg !== 'object') return;
+
+        if (netRole === 'host') {
+          if (msg.type === 'input') {
+            remoteKeys = msg.keys || {};
+          } else if (msg.type === 'new-match-request') {
+            // Joined player can restart after a finished match.
+            if (matchOver) resetOnlineMatch();
+          } else if (msg.type === 'request-state') {
+            sendSnapshotNow();
+          }
+          return;
+        }
+
+        // Joined/client receives only authoritative state from host.
+        if (netRole === 'client' && msg.type === 'state') {
           applySnapshot(msg);
         }
       });
+
       conn.on('close', () => {
-        setNetStatus('Opponent disconnected • local mode');
+        setNetStatus('Opponent disconnected');
         showOnlineControls(false);
-        conn = null; netRole = 'local'; remoteKeys = {};
+        conn = null;
+        netRole = 'local';
+        remoteKeys = {};
+        onlineMatchActive = false;
+        onlineGameStarted = false;
+        setNewMatchEnabled(true);
       });
-      conn.on('error', err => setNetStatus('Network error: ' + err.type));
+
+      conn.on('error', err => {
+        setNetStatus('Network error: ' + (err.type || err.message || 'unknown'));
+      });
     }
 
-    // Load PeerJS on demand so the game still works offline/local.
-    let peerLoader = null;
-    let onlineMatchActive = false;
-    let onlineGameStarted = false;
-    let pendingNewMatch = false;
-
-    function setNewMatchEnabled(enabled) {
-      const btn = document.getElementById('new-match-btn');
-      if (btn) btn.disabled = !enabled;
-    }
-
-    function syncMatchButton() {
-      // Disabled during every active match, including online matches.
-      setNewMatchEnabled(!onlineMatchActive && !onlineGameStarted && !matchOver);
-    }
-
-    function requestNewMatch() {
-      if (onlineMatchActive && conn && conn.open) {
-        // Either player can request a restart; the host performs it.
-        conn.send({ type: 'new-match-request' });
-        return;
-      }
-      if (onlineMatchActive || onlineGameStarted) return;
-      fullReset();
-    }
-
-    function startOnlineMatchFromHost() {
-      onlineMatchActive = true;
-      onlineGameStarted = true;
-      matchOver = false;
-      setNewMatchEnabled(false);
-      fullReset();
-      if (conn && conn.open) {
-        conn.send({
-          type: 'match-start',
-          mapIndex: maps.indexOf(currentMap),
-          powers: {
-            bm: blue.moveMult, bj: blue.jumpMult,
-            rm: red.moveMult, rj: red.jumpMult
-          }
-        });
-      }
-    }
-
-    function endOnlineMatch() {
-      onlineMatchActive = false;
-      onlineGameStarted = false;
-      setNewMatchEnabled(true);
-    }
-
-    function getOnlineKeys() {
-      // Online mode uses arrows for BOTH players.
-      return {
-        ArrowLeft: !!keys.ArrowLeft,
-        ArrowRight: !!keys.ArrowRight,
-        ArrowUp: !!keys.ArrowUp,
-        ArrowDown: !!keys.ArrowDown
-      };
-    }
     function loadPeerJS() {
       if (window.Peer) return Promise.resolve(window.Peer);
       if (peerLoader) return peerLoader;
@@ -958,8 +989,10 @@
         const s = document.createElement('script');
         s.src = 'https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js';
         s.async = true;
-        s.onload = () => window.Peer ? resolve(window.Peer) : reject(new Error('PeerJS loaded without Peer'));
-        s.onerror = () => reject(new Error('Could not load PeerJS. Open the game through http/https, not file://.'));
+        s.onload = () => window.Peer
+          ? resolve(window.Peer)
+          : reject(new Error('PeerJS loaded but Peer is unavailable'));
+        s.onerror = () => reject(new Error('Could not load PeerJS'));
         document.head.appendChild(s);
       });
       return peerLoader;
@@ -996,7 +1029,10 @@
         const PeerClass = await loadPeerJS();
         netRole = 'client';
         peer = new PeerClass();
-        peer.on('open', () => setupConnection(peer.connect(id, { reliable: true })));
+        peer.on('open', () => setupConnection(peer.connect(id, {
+          reliable: false,
+          serialization: 'json'
+        })));
         peer.on('error', err => setNetStatus('Peer error: ' + (err.type || err.message)));
       } catch (err) {
         netRole = 'local';
@@ -1007,19 +1043,22 @@
     function disconnectOnline() {
       if (conn) { try { conn.close(); } catch (_) {} }
       if (peer) { try { peer.destroy(); } catch (_) {} }
-      conn = null; peer = null; netRole = 'local'; remoteKeys = {};
+      conn = null;
+      peer = null;
+      netRole = 'local';
+      remoteKeys = {};
+      onlineMatchActive = false;
+      onlineGameStarted = false;
       showOnlineControls(false);
       setNetStatus('Local 2-player');
     }
 
+    // Send joined player's arrow-key state frequently enough for responsive control.
     setInterval(() => {
       if (netRole === 'client' && conn && conn.open) {
-        const relevant = ['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'];
-        const out = {};
-        relevant.forEach(k => out[k] = !!keys[k]);
-        conn.send({ type: 'input', keys: out });
+        conn.send({type: 'input', keys: getOnlineKeys()});
       }
-    }, 33);
+    }, 30);
 
     // ========== MAIN LOOP ==========
     let lastTime = performance.now();
@@ -1027,22 +1066,34 @@
       if (matchOver) return;
 
       const now = performance.now();
-      const dt = (now - lastTime) / 1000;
+      const dt = Math.min(0.05, (now - lastTime) / 1000);
       lastTime = now;
 
-      if (netRole !== 'client') {
-        control(blue, 'KeyA', 'KeyD', 'KeyW', 'KeyS');
-        control(red, 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown',
-          netRole === 'host' ? remoteKeys : keys);
-
+      if (netRole === 'host') {
+        // Host owns the authoritative physics. BOTH online players use arrows.
+        control(blue, 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', keys);
+        control(red, 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', remoteKeys);
         checkFall();
         updateCrown(dt);
 
         snapshotClock += dt;
-        if (netRole === 'host' && conn && conn.open && snapshotClock >= 0.05) {
+        if (snapshotClock >= 0.033) {
           snapshotClock = 0;
-          conn.send(makeSnapshot());
+          sendSnapshotNow();
         }
+      } else if (netRole === 'client') {
+        // Joined client is a VIEWER of authoritative physics. Freeze dynamic bodies
+        // between snapshots so its Matter.js simulation cannot diverge from host.
+        [...blue.parts, ...red.parts, ...crates, crown].filter(Boolean).forEach(b => {
+          Body.setVelocity(b, {x: 0, y: 0});
+          Body.setAngularVelocity(b, 0);
+        });
+      } else {
+        // Original local controls remain unchanged.
+        control(blue, 'KeyA', 'KeyD', 'KeyW', 'KeyS', keys);
+        control(red, 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', keys);
+        checkFall();
+        updateCrown(dt);
       }
     });
 
@@ -1072,6 +1123,7 @@
     onlineGameStarted = true;
     setNewMatchEnabled(false);
     setStatus('First to 5 • Random maps & powers every round!', 3500);
+    setNewMatchEnabled(false);
   </script>
 </body>
 </html>
