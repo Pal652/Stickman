@@ -1,12 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Floppy Fighters – Multiplayer Ragdoll</title>
+
   <style>
-    * { box-sizing: border-box; }
-    html, body {
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
       margin: 0;
       background: #0b0c1a;
       min-height: 100vh;
@@ -14,6 +20,7 @@
       color: #eee;
       user-select: none;
     }
+
     body {
       display: flex;
       flex-direction: column;
@@ -22,24 +29,30 @@
       padding: clamp(8px, 2vh, 24px) 10px 24px;
       overflow-x: hidden;
     }
+
     #game-container {
       position: relative;
       width: min(1000px, 96vw);
     }
+
     canvas#world {
       background: linear-gradient(180deg, #1a1a3e 0%, #0f0f23 100%);
       border-radius: 16px;
-      box-shadow: 0 0 60px rgba(76, 201, 240, 0.15), 0 0 20px rgba(247, 37, 133, 0.1);
+      box-shadow:
+        0 0 60px rgba(76, 201, 240, 0.15),
+        0 0 20px rgba(247, 37, 133, 0.1);
       display: block;
       width: 100%;
       height: auto;
       aspect-ratio: 1000 / 600;
     }
+
     #ui {
       margin-top: 16px;
       text-align: center;
       width: min(1000px, 96vw);
     }
+
     #scoreboard {
       display: flex;
       justify-content: center;
@@ -47,11 +60,12 @@
       gap: 8px 10px;
       margin-bottom: 8px;
     }
+
     .score-chip {
       font-size: clamp(12px, 1.6vw, 15px);
       font-weight: 800;
       letter-spacing: 0.5px;
-      background: rgba(255,255,255,0.04);
+      background: rgba(255, 255, 255, 0.04);
       border: 1.5px solid #888;
       border-radius: 20px;
       padding: 4px 12px 4px 8px;
@@ -61,11 +75,15 @@
       white-space: nowrap;
       transition: opacity 0.2s;
     }
+
     .score-chip .dot {
-      width: 10px; height: 10px; border-radius: 50%;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
       display: inline-block;
       box-shadow: 0 0 6px currentColor;
     }
+
     #status {
       font-size: clamp(14px, 2vw, 18px);
       min-height: 26px;
@@ -73,9 +91,10 @@
       font-weight: 600;
       margin: 6px 0;
     }
+
     .controls {
       display: flex;
-      justify-content: space-between;
+      justify-content: center;
       flex-wrap: wrap;
       gap: 6px;
       font-size: clamp(11px, 1.6vw, 13px);
@@ -83,7 +102,13 @@
       margin-top: 10px;
       padding: 0 10px;
     }
-    .controls span { background: #1a1a2e; padding: 4px 10px; border-radius: 6px; }
+
+    .controls span {
+      background: #1a1a2e;
+      padding: 4px 10px;
+      border-radius: 6px;
+    }
+
     button {
       margin-top: 12px;
       padding: 10px 22px;
@@ -94,22 +119,59 @@
       background: linear-gradient(135deg, #4361ee, #3a0ca3);
       color: white;
       cursor: pointer;
-      transition: transform 0.1s, box-shadow 0.2s, opacity 0.2s;
+      transition:
+        transform 0.1s,
+        box-shadow 0.2s,
+        opacity 0.2s;
     }
-    button:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(67, 97, 238, 0.4); }
-    button:active { transform: translateY(0); }
-    button:disabled { opacity: 0.4; cursor: not-allowed; transform:none; box-shadow:none; }
-    #room-id {
-      padding: 10px 12px; border: 0; border-radius: 10px;
-      background: #1a1a2e; color: #fff; width: 150px; max-width: 40vw;
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(67, 97, 238, 0.4);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    input {
+      outline: none;
+    }
+
+    #room-id,
+    #username {
+      padding: 10px 12px;
+      border: 0;
+      border-radius: 10px;
+      background: #1a1a2e;
+      color: #fff;
+      width: 150px;
+      max-width: 40vw;
       font-size: clamp(13px, 1.8vw, 15px);
     }
+
+    #username {
+      width: 140px;
+    }
+
+    #room-id::placeholder,
+    #username::placeholder {
+      color: #777;
+    }
+
     #goal-banner {
       position: absolute;
       top: 10px;
       left: 50%;
       transform: translateX(-50%);
-      background: rgba(0,0,0,0.65);
+      background: rgba(0, 0, 0, 0.65);
       padding: 5px 14px;
       border-radius: 20px;
       font-size: clamp(10px, 1.6vw, 14px);
@@ -122,12 +184,13 @@
       overflow: hidden;
       text-overflow: ellipsis;
     }
+
     #crown-timer {
       position: absolute;
       top: 44px;
       left: 50%;
       transform: translateX(-50%);
-      background: rgba(0,0,0,0.75);
+      background: rgba(0, 0, 0, 0.75);
       padding: 5px 18px;
       border-radius: 16px;
       font-size: clamp(15px, 2.4vw, 22px);
@@ -141,916 +204,2341 @@
       display: none;
       letter-spacing: 1px;
     }
-    #net-status { font-size: 13px; color: #888; margin-top: 8px; }
+
+    #net-status {
+      font-size: 13px;
+      color: #888;
+      margin-top: 8px;
+    }
+
     .toolbar {
-      margin-top: 12px; display: flex; justify-content: center; gap: 8px;
-      align-items: center; flex-wrap: wrap;
+      margin-top: 12px;
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    #power-legend {
+      margin: 12px auto 0;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 5px;
+      max-width: 950px;
+      font-size: 11px;
+      color: #aaa;
+    }
+
+    .power-legend-item {
+      padding: 4px 8px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.045);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    @media (max-width: 600px) {
+      #goal-banner {
+        top: 6px;
+      }
+
+      .toolbar {
+        gap: 5px;
+      }
+
+      button {
+        padding: 9px 14px;
+      }
     }
   </style>
 </head>
+
 <body>
+
   <div id="game-container">
-    <div id="goal-banner">🏆 First to 5 wins • Up to 10 players • Last one standing or hold the crown 5s!</div>
+
+    <div id="goal-banner">
+      🏆 First to 5 wins • Up to 10 players • Last one standing or hold the crown 5s!
+    </div>
+
     <div id="crown-timer">5.0</div>
+
     <canvas id="world" width="1000" height="600"></canvas>
+
   </div>
+
   <div id="ui">
+
     <div id="scoreboard"></div>
-    <div id="status">Random maps & powers every round!</div>
+
+    <div id="status">
+      Random maps & powers every round!
+    </div>
+
     <div class="controls">
-      <span>HOST / LOCAL P1: A D move • W jump • S slam</span>
-      <span>JOINED / LOCAL P2: ← → move • ↑ jump • ↓ slam</span>
+      <span>LOCAL P1: A D move • W jump • S slam</span>
+      <span>LOCAL P2 / ONLINE: ← → move • ↑ jump • ↓ slam • Space laser</span>
     </div>
+
     <div class="toolbar">
-      <button id="new-match-btn">New Match</button>
-      <button id="host-btn">Host Online</button>
+
+      <input id="username" placeholder="Username" maxlength="10" value="Player" autocomplete="off">
+
+      <button id="new-match-btn">
+        New Match
+      </button>
+
+      <button id="host-btn">
+        Host Online
+      </button>
+
       <input id="room-id" placeholder="Host ID" maxlength="40">
-      <button id="join-btn">Join Online</button>
-      <button id="disconnect-btn" style="display:none">Disconnect</button>
+
+      <button id="join-btn">
+        Join Online
+      </button>
+
+      <button id="disconnect-btn" style="display:none">
+        Disconnect
+      </button>
+
     </div>
-    <div id="net-status">Local 2-player</div>
+
+    <div id="power-legend">
+      <span class="power-legend-item">💥 Knockback = stronger pushes</span>
+      <span class="power-legend-item">🌀 Repulse = pushes enemies</span>
+      <span class="power-legend-item">🔥 Laser = Space, one-shot</span>
+      <span class="power-legend-item">🧱 Ghost = fall protection</span>
+      <span class="power-legend-item">⚓ Anchor = cannot be pushed</span>
+      <span class="power-legend-item">🔄 Invert = reverses others</span>
+    </div>
+
+    <div id="net-status">
+      Local 2-player
+    </div>
+
   </div>
+
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
-  <script>
-  (function () {
-    'use strict';
-    const { Engine, Render, Runner, Bodies, Composite, Constraint, Body, Events, Query } = Matter;
 
-    // ========================= CONSTANTS =========================
-    const WORLD_W = 1000, WORLD_H = 600;
+  <script>(function() {
+    'use strict';
+    const {
+        Engine,
+        Render,
+        Runner,
+        Bodies,
+        Composite,
+        Constraint,
+        Body,
+        Events,
+        Query
+    } = Matter;
+    // ============================================================
+    // CONSTANTS
+    // ============================================================
+    const WORLD_W = 1000;
+    const WORLD_H = 600;
     const MAX_PLAYERS = 10;
     const SCORE_TO_WIN = 5;
     const CROWN_HOLD_TIME = 5.0;
     const FALL_DEBOUNCE = 1200;
-    const PLAYER_COLORS = [
-      '#4cc9f0', '#f72585', '#ffd60a', '#06d6a0', '#f4a261',
-      '#9d4edd', '#ef476f', '#118ab2', '#c1121f', '#7209b7'
-    ];
-    const KEYMAP_WASD   = { left: 'KeyA',      right: 'KeyD',       jump: 'KeyW',    slam: 'KeyS'      };
-    const KEYMAP_ARROWS = { left: 'ArrowLeft', right: 'ArrowRight', jump: 'ArrowUp', slam: 'ArrowDown' };
-
-    // ========================= MAPS =========================
-    const MAPS = [
-      {
+    const POWERUP_INTERVAL = 10;
+    const MAX_POWER_LEVEL = 9;
+    const PLAYER_COLORS = ['#4cc9f0', '#f72585', '#ffd60a', '#06d6a0', '#f4a261', '#9d4edd', '#ef476f', '#118ab2', '#c1121f', '#7209b7'];
+    const KEYMAP_WASD = {
+        left: 'KeyA',
+        right: 'KeyD',
+        jump: 'KeyW',
+        slam: 'KeyS'
+    };
+    const KEYMAP_ARROWS = {
+        left: 'ArrowLeft',
+        right: 'ArrowRight',
+        jump: 'ArrowUp',
+        slam: 'ArrowDown'
+    };
+    const POWER_TYPES = {
+        KNOCKBACK: 'knockback',
+        REPULSE: 'repulse',
+        LASER: 'laser',
+        GHOST: 'ghost',
+        ANCHOR: 'anchor',
+        INVERT: 'invert'
+    };
+    const POWERUP_INFO = {
+        knockback: {
+            icon: '💥',
+            color: '#ff595e',
+            name: 'Knockback'
+        },
+        repulse: {
+            icon: '🌀',
+            color: '#4cc9f0',
+            name: 'Repulse'
+        },
+        laser: {
+            icon: '🔥',
+            color: '#ff006e',
+            name: 'Laser'
+        },
+        ghost: {
+            icon: '🧱',
+            color: '#9d4edd',
+            name: 'Ghost'
+        },
+        anchor: {
+            icon: '⚓',
+            color: '#06d6a0',
+            name: 'Anchor'
+        },
+        invert: {
+            icon: '🔄',
+            color: '#ffd60a',
+            name: 'Invert'
+        }
+    };
+    // ============================================================
+    // MAPS
+    // ============================================================
+    const MAPS = [{
         name: 'Classic Hills',
         platforms: [
-          [180, 420, 200, 22, '#0f3460'], [820, 420, 200, 22, '#0f3460'],
-          [500, 300, 160, 22, '#e94560'], [320, 200, 120, 18, '#0f3460'], [680, 200, 120, 18, '#0f3460'],
+            [180, 420, 200, 22, '#0f3460'],
+            [820, 420, 200, 22, '#0f3460'],
+            [500, 300, 160, 22, '#e94560'],
+            [320, 200, 120, 18, '#0f3460'],
+            [680, 200, 120, 18, '#0f3460']
         ],
-        crates: [[250, 500], [750, 500], [500, 250], [400, 380], [600, 380]],
-        blueSpawn: [200, 280], redSpawn: [800, 280]
-      },
-      {
+        crates: [
+            [250, 500],
+            [750, 500],
+            [500, 250],
+            [400, 380],
+            [600, 380]
+        ],
+        blueSpawn: [200, 280],
+        redSpawn: [800, 280]
+    }, {
         name: 'The Pit',
         platforms: [
-          [150, 450, 180, 22, '#0f3460'], [850, 450, 180, 22, '#0f3460'],
-          [500, 380, 220, 22, '#e94560'], [300, 250, 100, 18, '#0f3460'], [700, 250, 100, 18, '#0f3460'],
-          [500, 150, 140, 18, '#0f3460'],
+            [150, 450, 180, 22, '#0f3460'],
+            [850, 450, 180, 22, '#0f3460'],
+            [500, 380, 220, 22, '#e94560'],
+            [300, 250, 100, 18, '#0f3460'],
+            [700, 250, 100, 18, '#0f3460'],
+            [500, 150, 140, 18, '#0f3460']
         ],
-        crates: [[200, 520], [800, 520], [450, 330], [550, 330], [500, 100]],
-        blueSpawn: [180, 320], redSpawn: [820, 320]
-      },
-      {
+        crates: [
+            [200, 520],
+            [800, 520],
+            [450, 330],
+            [550, 330],
+            [500, 100]
+        ],
+        blueSpawn: [180, 320],
+        redSpawn: [820, 320]
+    }, {
         name: 'Sky Bridges',
         platforms: [
-          [120, 500, 160, 20, '#0f3460'], [880, 500, 160, 20, '#0f3460'],
-          [300, 380, 140, 18, '#0f3460'], [700, 380, 140, 18, '#0f3460'],
-          [500, 260, 180, 20, '#e94560'], [200, 160, 110, 16, '#0f3460'], [800, 160, 110, 16, '#0f3460'],
+            [120, 500, 160, 20, '#0f3460'],
+            [880, 500, 160, 20, '#0f3460'],
+            [300, 380, 140, 18, '#0f3460'],
+            [700, 380, 140, 18, '#0f3460'],
+            [500, 260, 180, 20, '#e94560'],
+            [200, 160, 110, 16, '#0f3460'],
+            [800, 160, 110, 16, '#0f3460']
         ],
-        crates: [[150, 460], [850, 460], [500, 220], [350, 340], [650, 340]],
-        blueSpawn: [140, 380], redSpawn: [860, 380]
-      },
-      {
+        crates: [
+            [150, 460],
+            [850, 460],
+            [500, 220],
+            [350, 340],
+            [650, 340]
+        ],
+        blueSpawn: [140, 380],
+        redSpawn: [860, 380]
+    }, {
         name: 'Zigzag',
         platforms: [
-          [200, 500, 180, 20, '#0f3460'], [800, 500, 180, 20, '#0f3460'],
-          [350, 380, 130, 18, '#0f3460'], [650, 380, 130, 18, '#0f3460'],
-          [500, 280, 120, 18, '#e94560'], [250, 180, 100, 16, '#0f3460'], [750, 180, 100, 16, '#0f3460'],
+            [200, 500, 180, 20, '#0f3460'],
+            [800, 500, 180, 20, '#0f3460'],
+            [350, 380, 130, 18, '#0f3460'],
+            [650, 380, 130, 18, '#0f3460'],
+            [500, 280, 120, 18, '#e94560'],
+            [250, 180, 100, 16, '#0f3460'],
+            [750, 180, 100, 16, '#0f3460']
         ],
-        crates: [[220, 460], [780, 460], [500, 240], [400, 340], [600, 340]],
-        blueSpawn: [220, 380], redSpawn: [780, 380]
-      },
-      {
+        crates: [
+            [220, 460],
+            [780, 460],
+            [500, 240],
+            [400, 340],
+            [600, 340]
+        ],
+        blueSpawn: [220, 380],
+        redSpawn: [780, 380]
+    }, {
         name: 'Narrow Ledges',
         platforms: [
-          [100, 480, 120, 18, '#0f3460'], [900, 480, 120, 18, '#0f3460'],
-          [300, 360, 100, 16, '#0f3460'], [700, 360, 100, 16, '#0f3460'],
-          [500, 240, 140, 18, '#e94560'], [200, 150, 90, 14, '#0f3460'], [800, 150, 90, 14, '#0f3460'],
-          [500, 480, 80, 16, '#0f3460'],
+            [100, 480, 120, 18, '#0f3460'],
+            [900, 480, 120, 18, '#0f3460'],
+            [300, 360, 100, 16, '#0f3460'],
+            [700, 360, 100, 16, '#0f3460'],
+            [500, 240, 140, 18, '#e94560'],
+            [200, 150, 90, 14, '#0f3460'],
+            [800, 150, 90, 14, '#0f3460'],
+            [500, 480, 80, 16, '#0f3460']
         ],
-        crates: [[120, 440], [880, 440], [500, 200], [320, 320], [680, 320]],
-        blueSpawn: [120, 360], redSpawn: [880, 360]
-      },
-      {
+        crates: [
+            [120, 440],
+            [880, 440],
+            [500, 200],
+            [320, 320],
+            [680, 320]
+        ],
+        blueSpawn: [120, 360],
+        redSpawn: [880, 360]
+    }, {
         name: 'Big Arena',
         platforms: [
-          [250, 450, 280, 24, '#0f3460'], [750, 450, 280, 24, '#0f3460'],
-          [500, 300, 200, 22, '#e94560'], [150, 200, 140, 18, '#0f3460'], [850, 200, 140, 18, '#0f3460'],
+            [250, 450, 280, 24, '#0f3460'],
+            [750, 450, 280, 24, '#0f3460'],
+            [500, 300, 200, 22, '#e94560'],
+            [150, 200, 140, 18, '#0f3460'],
+            [850, 200, 140, 18, '#0f3460']
         ],
-        crates: [[300, 400], [700, 400], [500, 250], [400, 500], [600, 500], [200, 520], [800, 520]],
-        blueSpawn: [250, 320], redSpawn: [750, 320]
-      }
-    ];
-
-    // ========================= RAGDOLL PLAYER =========================
+        crates: [
+            [300, 400],
+            [700, 400],
+            [500, 250],
+            [400, 500],
+            [600, 500],
+            [200, 520],
+            [800, 520]
+        ],
+        blueSpawn: [250, 320],
+        redSpawn: [750, 320]
+    }];
+    // ============================================================
+    // RAGDOLL PLAYER
+    // ============================================================
     class RagdollPlayer {
-      constructor(game, id, x, y, color) {
-        this.game = game;
-        this.id = id;
-        this.color = color;
-        this.moveMult = 1.0;
-        this.jumpMult = 1.0;
-        this.lastJump = 0;
-        this.jumpHeld = false;
-        this.jumpStartedAt = 0;
-        this.alive = false;
-        this.parts = [];
-        this.joints = [];
-        this.springs = [];
-        this.head = this.torso = this.leftArm = this.rightArm = this.leftLeg = this.rightLeg = null;
-        this.spawnBody(x, y);
-      }
-
-      // (Re)creates this player's physical body at the given position.
-      spawnBody(x, y) {
-        this.removeBody();
-        const world = this.game.world;
-        const group = Body.nextGroup(true);
-        const mk = (name, body) => { body.label = `${this.id}:${name}`; this[name] = body; return body; };
-
-        const head = mk('head', Bodies.circle(x, y - 55, 16, {
-          collisionFilter: { group }, render: { fillStyle: this.color },
-          density: 0.0016, friction: 0.12, restitution: 0.2
-        }));
-        const torso = mk('torso', Bodies.rectangle(x, y, 24, 46, {
-          collisionFilter: { group }, render: { fillStyle: this.color },
-          density: 0.0024, friction: 0.35, chamfer: { radius: 6 }
-        }));
-        const leftArm = mk('leftArm', Bodies.rectangle(x - 26, y - 10, 12, 36, {
-          collisionFilter: { group }, render: { fillStyle: this.color },
-          density: 0.0008, friction: 0.12, chamfer: { radius: 4 }
-        }));
-        const rightArm = mk('rightArm', Bodies.rectangle(x + 26, y - 10, 12, 36, {
-          collisionFilter: { group }, render: { fillStyle: this.color },
-          density: 0.0008, friction: 0.12, chamfer: { radius: 4 }
-        }));
-        const leftLeg = mk('leftLeg', Bodies.rectangle(x - 10, y + 46, 12, 40, {
-          collisionFilter: { group }, render: { fillStyle: this.color },
-          density: 0.0015, friction: 0.45, chamfer: { radius: 4 }
-        }));
-        const rightLeg = mk('rightLeg', Bodies.rectangle(x + 10, y + 46, 12, 40, {
-          collisionFilter: { group }, render: { fillStyle: this.color },
-          density: 0.0015, friction: 0.45, chamfer: { radius: 4 }
-        }));
-
-        this.joints = [
-          Constraint.create({ bodyA: head, bodyB: torso, pointA: { x: 0, y: 16 }, pointB: { x: 0, y: -23 }, stiffness: 0.95, damping: 0.15, length: 1 }),
-          Constraint.create({ bodyA: torso, bodyB: leftArm, pointA: { x: -12, y: -15 }, pointB: { x: 0, y: -13 }, stiffness: 0.65, damping: 0.08, length: 3 }),
-          Constraint.create({ bodyA: torso, bodyB: rightArm, pointA: { x: 12, y: -15 }, pointB: { x: 0, y: -13 }, stiffness: 0.65, damping: 0.08, length: 3 }),
-          Constraint.create({ bodyA: torso, bodyB: leftLeg, pointA: { x: -8, y: 23 }, pointB: { x: 0, y: -17 }, stiffness: 0.85, damping: 0.12, length: 2 }),
-          Constraint.create({ bodyA: torso, bodyB: rightLeg, pointA: { x: 8, y: 23 }, pointB: { x: 0, y: -17 }, stiffness: 0.85, damping: 0.12, length: 2 }),
-        ];
-
-        this.parts = [head, torso, leftArm, rightArm, leftLeg, rightLeg];
-        this.springs = this._buildAntiPenetrationSprings();
-
-        Composite.add(world, [...this.parts, ...this.joints, ...this.springs]);
-        Body.setVelocity(torso, { x: 0, y: -1.5 });
-        this.alive = true;
-      }
-
-      // Soft "open pose" springs between non-adjacent limbs so they push apart
-      // instead of clipping through each other (they share a collision group
-      // with their own siblings, so real collisions never trigger between them).
-      _buildAntiPenetrationSprings() {
-        const pairs = [
-          ['leftArm', 'rightArm'], ['leftLeg', 'rightLeg'],
-          ['leftArm', 'leftLeg'], ['rightArm', 'rightLeg'],
-          ['head', 'leftLeg'], ['head', 'rightLeg'],
-        ];
-        return pairs.map(([a, b]) => {
-          const A = this[a], B = this[b];
-          const length = Math.hypot(A.position.x - B.position.x, A.position.y - B.position.y);
-          return Constraint.create({
-            bodyA: A, bodyB: B, length, stiffness: 0.012, damping: 0.15,
-            render: { visible: false }
-          });
-        });
-      }
-
-      removeBody() {
-        if (this.parts.length) {
-          Composite.remove(this.game.world, [...this.parts, ...this.joints, ...this.springs]);
+        constructor(game, id, x, y, color) {
+            this.game = game;
+            this.id = id;
+            this.color = color;
+            this.username = `Player ${id + 1}`;
+            this.moveMult = 1.0;
+            this.jumpMult = 1.0;
+            this.lastJump = 0;
+            this.jumpHeld = false;
+            this.jumpStartedAt = 0;
+            this.alive = false;
+            this.parts = [];
+            this.joints = [];
+            this.springs = [];
+            this.head = null;
+            this.torso = null;
+            this.leftArm = null;
+            this.rightArm = null;
+            this.leftLeg = null;
+            this.rightLeg = null;
+            // Powerup state
+            this.powerType = null;
+            this.powerLevel = 0;
+            this.powerTimer = 0;
+            this.laserReady = false;
+            this.lastLaser = 0;
+            this.spawnBody(x, y);
         }
-        this.parts = []; this.joints = []; this.springs = [];
-        this.head = this.torso = this.leftArm = this.rightArm = this.leftLeg = this.rightLeg = null;
-        this.alive = false;
-      }
-
-      freeze() {
-        for (const b of this.parts) { Body.setVelocity(b, { x: 0, y: 0 }); Body.setAngularVelocity(b, 0); }
-      }
-
-      isOnGround() {
-        if (!this.alive) return false;
-        const surfaces = this.game.getSurfacesFor(this);
-        if (Query.collides(this.leftLeg, surfaces).length > 0) return true;
-        if (Query.collides(this.rightLeg, surfaces).length > 0) return true;
-        if (Query.collides(this.torso, surfaces).length > 0) return true;
-        return false;
-      }
-
-      isOutOfBounds() {
-        if (!this.alive) return false;
-        const t = this.torso.position, h = this.head.position;
-        return t.y > 680 || h.y > 680 || t.x < -80 || t.x > WORLD_W + 80 || h.x < -80 || h.x > WORLD_W + 80;
-      }
-
-      applyControl(keyState, keymap) {
-        if (!this.alive) return;
-        const baseMove = 0.018, baseJump = 0.154, slamForce = 0.035;
-        const moveForce = baseMove * (this.moveMult || 1);
-        const jumpForce = baseJump * (this.jumpMult || 1);
-
-        if (keyState[keymap.left]) {
-          Body.applyForce(this.torso, this.torso.position, { x: -moveForce, y: 0 });
-          Body.applyForce(this.head, this.head.position, { x: -moveForce * 0.35, y: 0 });
-          Body.applyForce(this.leftLeg, this.leftLeg.position, { x: -moveForce * 0.25, y: 0 });
+        spawnBody(x, y) {
+            this.removeBody();
+            const world = this.game.world;
+            const group = Body.nextGroup(true);
+            const mk = (name, body) => {
+                body.label = `${this.id}:${name}`;
+                this[name] = body;
+                return body;
+            };
+            const head = mk('head', Bodies.circle(x, y - 55, 16, {
+                collisionFilter: {
+                    group
+                },
+                render: {
+                    fillStyle: this.color
+                },
+                density: 0.0016,
+                friction: 0.12,
+                restitution: 0.2
+            }));
+            const torso = mk('torso', Bodies.rectangle(x, y, 24, 46, {
+                collisionFilter: {
+                    group
+                },
+                render: {
+                    fillStyle: this.color
+                },
+                density: 0.0024,
+                friction: 0.35,
+                chamfer: {
+                    radius: 6
+                }
+            }));
+            const leftArm = mk('leftArm', Bodies.rectangle(x - 26, y - 10, 12, 36, {
+                collisionFilter: {
+                    group
+                },
+                render: {
+                    fillStyle: this.color
+                },
+                density: 0.0008,
+                friction: 0.12,
+                chamfer: {
+                    radius: 4
+                }
+            }));
+            const rightArm = mk('rightArm', Bodies.rectangle(x + 26, y - 10, 12, 36, {
+                collisionFilter: {
+                    group
+                },
+                render: {
+                    fillStyle: this.color
+                },
+                density: 0.0008,
+                friction: 0.12,
+                chamfer: {
+                    radius: 4
+                }
+            }));
+            const leftLeg = mk('leftLeg', Bodies.rectangle(x - 10, y + 46, 12, 40, {
+                collisionFilter: {
+                    group
+                },
+                render: {
+                    fillStyle: this.color
+                },
+                density: 0.0015,
+                friction: 0.45,
+                chamfer: {
+                    radius: 4
+                }
+            }));
+            const rightLeg = mk('rightLeg', Bodies.rectangle(x + 10, y + 46, 12, 40, {
+                collisionFilter: {
+                    group
+                },
+                render: {
+                    fillStyle: this.color
+                },
+                density: 0.0015,
+                friction: 0.45,
+                chamfer: {
+                    radius: 4
+                }
+            }));
+            this.joints = [
+                Constraint.create({
+                    bodyA: head,
+                    bodyB: torso,
+                    pointA: {
+                        x: 0,
+                        y: 16
+                    },
+                    pointB: {
+                        x: 0,
+                        y: -23
+                    },
+                    stiffness: 0.95,
+                    damping: 0.15,
+                    length: 1
+                }),
+                Constraint.create({
+                    bodyA: torso,
+                    bodyB: leftArm,
+                    pointA: {
+                        x: -12,
+                        y: -15
+                    },
+                    pointB: {
+                        x: 0,
+                        y: -13
+                    },
+                    stiffness: 0.65,
+                    damping: 0.08,
+                    length: 3
+                }),
+                Constraint.create({
+                    bodyA: torso,
+                    bodyB: rightArm,
+                    pointA: {
+                        x: 12,
+                        y: -15
+                    },
+                    pointB: {
+                        x: 0,
+                        y: -13
+                    },
+                    stiffness: 0.65,
+                    damping: 0.08,
+                    length: 3
+                }),
+                Constraint.create({
+                    bodyA: torso,
+                    bodyB: leftLeg,
+                    pointA: {
+                        x: -8,
+                        y: 23
+                    },
+                    pointB: {
+                        x: 0,
+                        y: -17
+                    },
+                    stiffness: 0.85,
+                    damping: 0.12,
+                    length: 2
+                }),
+                Constraint.create({
+                    bodyA: torso,
+                    bodyB: rightLeg,
+                    pointA: {
+                        x: 8,
+                        y: 23
+                    },
+                    pointB: {
+                        x: 0,
+                        y: -17
+                    },
+                    stiffness: 0.85,
+                    damping: 0.12,
+                    length: 2
+                })
+            ];
+            this.parts = [
+                head,
+                torso,
+                leftArm,
+                rightArm,
+                leftLeg,
+                rightLeg
+            ];
+            this.springs = this._buildAntiPenetrationSprings();
+            Composite.add(world,
+                [...this.parts, ...this.joints, ...this.springs]);
+            Body.setVelocity(torso, {
+                x: 0,
+                y: -1.5
+            });
+            this.alive = true;
+            this.updateVisuals();
         }
-        if (keyState[keymap.right]) {
-          Body.applyForce(this.torso, this.torso.position, { x: moveForce, y: 0 });
-          Body.applyForce(this.head, this.head.position, { x: moveForce * 0.35, y: 0 });
-          Body.applyForce(this.rightLeg, this.rightLeg.position, { x: moveForce * 0.25, y: 0 });
+        _buildAntiPenetrationSprings() {
+            const pairs = [
+                ['leftArm', 'rightArm'],
+                ['leftLeg', 'rightLeg'],
+                ['leftArm', 'leftLeg'],
+                ['rightArm', 'rightLeg'],
+                ['head', 'leftLeg'],
+                ['head', 'rightLeg']
+            ];
+            return pairs.map(([a, b]) => {
+                const A = this[a];
+                const B = this[b];
+                const length = Math.hypot(A.position.x - B.position.x, A.position.y - B.position.y);
+                return Constraint.create({
+                    bodyA: A,
+                    bodyB: B,
+                    length,
+                    stiffness: 0.012,
+                    damping: 0.15,
+                    render: {
+                        visible: false
+                    }
+                });
+            });
         }
-
-        const now = Date.now();
-        if (keyState[keymap.jump] && !this.jumpHeld && this.isOnGround() && (now - this.lastJump > 320)) {
-          Body.applyForce(this.torso, this.torso.position, { x: 0, y: -jumpForce });
-          Body.applyForce(this.head, this.head.position, { x: 0, y: -jumpForce * 0.45 });
-          Body.applyForce(this.leftLeg, this.leftLeg.position, { x: 0, y: -jumpForce * 0.2 });
-          Body.applyForce(this.rightLeg, this.rightLeg.position, { x: 0, y: -jumpForce * 0.2 });
-          this.lastJump = now; this.jumpHeld = true; this.jumpStartedAt = now;
+        removeBody() {
+            if (this.parts.length) {
+                Composite.remove(this.game.world,
+                    [...this.parts, ...this.joints, ...this.springs]);
+            }
+            this.parts = [];
+            this.joints = [];
+            this.springs = [];
+            this.head = null;
+            this.torso = null;
+            this.leftArm = null;
+            this.rightArm = null;
+            this.leftLeg = null;
+            this.rightLeg = null;
+            this.alive = false;
         }
-        if (!keyState[keymap.jump] && this.jumpHeld) this._cutJump();
-        if (this.jumpHeld && now - this.jumpStartedAt > 180) this.jumpHeld = false;
-
-        if (keyState[keymap.slam]) {
-          Body.applyForce(this.head, this.head.position, { x: 0, y: slamForce });
-          Body.applyForce(this.torso, this.torso.position, { x: 0, y: slamForce * 0.8 });
+        freeze() {
+            for (const b of this.parts) {
+                Body.setVelocity(b, {
+                    x: 0,
+                    y: 0
+                });
+                Body.setAngularVelocity(b, 0);
+            }
         }
-      }
-
-      _cutJump() {
-        if (!this.jumpHeld) return;
-        this.jumpHeld = false;
-        if (Date.now() - this.jumpStartedAt < 180) {
-          for (const part of this.parts) {
-            if (part.velocity.y < -2) Body.setVelocity(part, { x: part.velocity.x, y: Math.max(part.velocity.y, -6.5) });
-          }
+        isOnGround() {
+            if (!this.alive) {
+                return false;
+            }
+            const surfaces = this.game.getSurfacesFor(this);
+            if (Query.collides(this.leftLeg, surfaces).length > 0) {
+                return true;
+            }
+            if (Query.collides(this.rightLeg, surfaces).length > 0) {
+                return true;
+            }
+            if (Query.collides(this.torso, surfaces).length > 0) {
+                return true;
+            }
+            return false;
         }
-      }
-
-      serialize() {
-        return this.parts.map(b => ({
-          id: b.label, x: b.position.x, y: b.position.y, a: b.angle,
-          vx: b.velocity.x, vy: b.velocity.y, av: b.angularVelocity
-        }));
-      }
-
-      applyPartStates(byLabel) {
-        for (const b of this.parts) {
-          const st = byLabel.get(b.label);
-          if (!st) continue;
-          Body.setPosition(b, { x: st.x, y: st.y });
-          Body.setAngle(b, st.a);
-          Body.setVelocity(b, { x: st.vx, y: st.vy });
-          Body.setAngularVelocity(b, st.av);
+        isOutOfBounds() {
+            if (!this.alive) {
+                return false;
+            }
+            const t = this.torso.position;
+            const h = this.head.position;
+            return (t.y > 680 || h.y > 680 || t.x < -80 || t.x > WORLD_W + 80 || h.x < -80 || h.x > WORLD_W + 80);
         }
-      }
+        applyControl(keyState, keymap) {
+            if (!this.alive) {
+                return;
+            }
+            const baseMove = 0.012;
+            const baseJump = 0.124;
+            const slamForce = 0.025;
+            const moveForce = baseMove * (this.moveMult || 1);
+            const jumpForce = baseJump * (this.jumpMult || 1);
+            // --------------------------------------------------------
+            // Movement
+            // --------------------------------------------------------
+            if (keyState[keymap.left]) {
+                Body.applyForce(this.torso, this.torso.position, {
+                    x: -moveForce,
+                    y: 0
+                });
+                Body.applyForce(this.head, this.head.position, {
+                    x: -moveForce * 0.85,
+                    y: 0
+                });
+                Body.applyForce(this.leftLeg, this.leftLeg.position, {
+                    x: -moveForce * 0.25,
+                    y: 0
+                });
+            }
+            if (keyState[keymap.right]) {
+                Body.applyForce(this.torso, this.torso.position, {
+                    x: moveForce,
+                    y: 0
+                });
+                Body.applyForce(this.head, this.head.position, {
+                    x: moveForce * 0.85,
+                    y: 0
+                });
+                Body.applyForce(this.rightLeg, this.rightLeg.position, {
+                    x: moveForce * 0.25,
+                    y: 0
+                });
+            }
+            // --------------------------------------------------------
+            // Jump
+            // --------------------------------------------------------
+            const now = Date.now();
+            if (keyState[keymap.jump] && !this.jumpHeld && this.isOnGround() && now - this.lastJump > 320) {
+                Body.applyForce(this.torso, this.torso.position, {
+                    x: 0,
+                    y: -jumpForce
+                });
+                Body.applyForce(this.head, this.head.position, {
+                    x: 0,
+                    y: -jumpForce * 0.85
+                });
+                Body.applyForce(this.leftLeg, this.leftLeg.position, {
+                    x: 0,
+                    y: -jumpForce * 0.2
+                });
+                Body.applyForce(this.rightLeg, this.rightLeg.position, {
+                    x: 0,
+                    y: -jumpForce * 0.2
+                });
+                this.lastJump = now;
+                this.jumpHeld = true;
+                this.jumpStartedAt = now;
+            }
+            if (!keyState[keymap.jump] && this.jumpHeld) {
+                this._cutJump();
+            }
+            if (this.jumpHeld && now - this.jumpStartedAt > 180) {
+                this.jumpHeld = false;
+            }
+            // --------------------------------------------------------
+            // Slam
+            // --------------------------------------------------------
+            if (keyState[keymap.slam]) {
+                Body.applyForce(this.head, this.head.position, {
+                    x: 0,
+                    y: slamForce
+                });
+                Body.applyForce(this.torso, this.torso.position, {
+                    x: 0,
+                    y: slamForce * 0.8
+                });
+            }
+        }
+        _cutJump() {
+            if (!this.jumpHeld) {
+                return;
+            }
+            this.jumpHeld = false;
+            if (Date.now() - this.jumpStartedAt < 180) {
+                for (const part of this.parts) {
+                    if (part.velocity.y < -2) {
+                        Body.setVelocity(part, {
+                            x: part.velocity.x,
+                            y: Math.max(part.velocity.y, -6.5)
+                        });
+                    }
+                }
+            }
+        }
+        // ==========================================================
+        // POWERUPS
+        // ==========================================================
+        givePower(type) {
+            if (this.powerType === type) {
+                this.powerLevel = Math.min(MAX_POWER_LEVEL, this.powerLevel + 1);
+            } else {
+                this.powerType = type;
+                this.powerLevel = 1;
+            }
+            if (type === POWER_TYPES.LASER) {
+                this.laserReady = true;
+                this.powerTimer = 0;
+            }
+            if (type === POWER_TYPES.GHOST) {
+                this.powerTimer = 20;
+            }
+            if (type === POWER_TYPES.INVERT) {
+                this.powerTimer = 5;
+            }
+            if (type === POWER_TYPES.ANCHOR) {
+                this.powerTimer = 0;
+            }
+            this.updateVisuals();
+            this.game.setStatus(`${this.game.displayName(this.id)} got ` + `${POWERUP_INFO[type].name}` + (this.powerLevel > 1 ? ` Lv.${this.powerLevel}` : ''), 1800);
+        }
+        clearPower() {
+            this.powerType = null;
+            this.powerLevel = 0;
+            this.powerTimer = 0;
+            this.laserReady = false;
+            this.updateVisuals();
+        }
+        hasPower(type) {
+            return (this.powerType === type && this.powerLevel > 0);
+        }
+        powerMultiplier() {
+            return (1 + Math.max(0, this.powerLevel - 1) * 0.45);
+        }
+        serializePower() {
+            return {
+                type: this.powerType,
+                level: this.powerLevel,
+                timer: this.powerTimer,
+                laserReady: this.laserReady
+            };
+        }
+        updateVisuals() {
+            const glowing = this.hasPower(POWER_TYPES.KNOCKBACK);
+            for (const part of this.parts) {
+                part.render.fillStyle = this.color;
+                part.render.strokeStyle = glowing ? '#ffffff' : this.color;
+                part.render.lineWidth = glowing ? 4 : 1;
+            }
+        }
+        serialize() {
+            return this.parts.map(b => ({
+                id: b.label,
+                x: b.position.x,
+                y: b.position.y,
+                a: b.angle,
+                vx: b.velocity.x,
+                vy: b.velocity.y,
+                av: b.angularVelocity
+            }));
+        }
+        applyPartStates(byLabel) {
+            for (const b of this.parts) {
+                const st = byLabel.get(b.label);
+                if (!st) {
+                    continue;
+                }
+                Body.setPosition(b, {
+                    x: st.x,
+                    y: st.y
+                });
+                Body.setAngle(b, st.a);
+                Body.setVelocity(b, {
+                    x: st.vx,
+                    y: st.vy
+                });
+                Body.setAngularVelocity(b, st.av);
+            }
+        }
     }
-
-    // ========================= CROWN (the "ball") =========================
+    // ============================================================
+    // CROWN
+    // ============================================================
     class Crown {
-      constructor(world) {
-        this.world = world;
-        this.body = null;
-        this.holderId = null;
-        this.timer = 0;
-        this.spawn();
-      }
-      spawn() {
-        if (this.body) Composite.remove(this.world, this.body);
-        this.body = Bodies.circle(WORLD_W / 2, 120, 16, {
-          density: 0.0008, friction: 0.3, restitution: 0.6,
-          render: { fillStyle: '#ffd60a', strokeStyle: '#ff9f1c', lineWidth: 3 },
-          label: 'crown'
-        });
-        Composite.add(this.world, this.body);
-        this.holderId = null;
-        this.timer = 0;
-      }
-      reset() { this.spawn(); }
+        constructor(world) {
+            this.world = world;
+            this.body = null;
+            this.holderId = null;
+            this.timer = 0;
+            this.spawn();
+        }
+        spawn() {
+            if (this.body) {
+                Composite.remove(this.world, this.body);
+            }
+            this.body = Bodies.circle(WORLD_W / 2, 120, 16, {
+                density: 0.0008,
+                friction: 0.3,
+                restitution: 0.6,
+                render: {
+                    fillStyle: '#ffd60a',
+                    strokeStyle: '#ff9f1c',
+                    lineWidth: 3
+                },
+                label: 'crown'
+            });
+            Composite.add(this.world, this.body);
+            this.holderId = null;
+            this.timer = 0;
+        }
+        reset() {
+            this.spawn();
+        }
     }
-
-    // ========================= GAME =========================
+    // ============================================================
+    // GAME
+    // ============================================================
     class Game {
-      constructor(canvas) {
-        this.engine = Engine.create();
-        this.world = this.engine.world;
-        this.engine.gravity.y = 1.25;
-
-        this.render = Render.create({
-          canvas,
-          engine: this.engine,
-          options: { width: WORLD_W, height: WORLD_H, wireframes: false, background: 'transparent', showAngleIndicator: false }
-        });
-
-        this.ground = Bodies.rectangle(WORLD_W / 2, 590, 960, 30, { isStatic: true, render: { fillStyle: '#16213e' }, friction: 0.9 });
-        Composite.add(this.world, [this.ground]);
-
-        this.platforms = [];
-        this.crates = [];
-        this.currentMap = null;
-
-        this.players = new Map();  // id -> RagdollPlayer
-        this.scores = new Map();   // id -> number
-        this.remoteInputs = new Map(); // host-only: id -> keys object from a joined client
-
-        this.matchOver = false;
-        this.lastFall = 0;
-        this.mode = 'local'; // 'local' | 'host' | 'client'
-        this.selfId = 0;     // for client: which id is "you"
-        this.keys = {};
-
-        this.crown = new Crown(this.world);
-        this.net = new NetworkManager(this);
-
-        this._bindInput();
-        this.setupLocalPlayers();
-        this._bindLoop();
-      }
-
-      // ---------- map / crates ----------
-      loadRandomMap() { this.loadMapObj(MAPS[Math.floor(Math.random() * MAPS.length)]); }
-      loadMapObj(map) {
-        this.platforms.forEach(p => Composite.remove(this.world, p));
-        this.platforms = [];
-        map.platforms.forEach(([x, y, w, h, color]) => {
-          const plat = Bodies.rectangle(x, y, w, h, { isStatic: true, render: { fillStyle: color }, friction: 0.8 });
-          this.platforms.push(plat);
-          Composite.add(this.world, plat);
-        });
-        this.currentMap = map;
-      }
-      spawnCrates(positions) {
-        this.crates.forEach(c => Composite.remove(this.world, c));
-        this.crates = [];
-        (positions || this.currentMap.crates).forEach(([x, y]) => {
-          const crate = Bodies.rectangle(x, y, 36, 36, {
-            density: 0.003, friction: 0.6, restitution: 0.2,
-            render: { fillStyle: '#f4a261' }, chamfer: { radius: 4 }
-          });
-          this.crates.push(crate);
-          Composite.add(this.world, crate);
-        });
-      }
-
-      // ---------- players ----------
-      spawnForIndex(idx, n) {
-        if (n <= 1) return this.currentMap.blueSpawn;
-        if (n === 2) return idx === 0 ? this.currentMap.blueSpawn : this.currentMap.redSpawn;
-        const margin = 110, usable = WORLD_W - margin * 2;
-        return [margin + usable * idx / (n - 1), 170];
-      }
-
-      // Creates a player slot if it doesn't exist yet (used on join).
-      ensurePlayer(id) {
-        if (this.players.has(id)) return this.players.get(id);
-        const n = this.players.size + 1;
-        const ids = [...this.players.keys(), id].sort((a, b) => a - b);
-        const idx = ids.indexOf(id);
-        const [x, y] = this.spawnForIndex(idx, n);
-        const color = PLAYER_COLORS[id % PLAYER_COLORS.length];
-        const p = new RagdollPlayer(this, id, x, y, color);
-        this.players.set(id, p);
-        if (!this.scores.has(id)) this.scores.set(id, 0);
-        this.updateScoreboardUI();
-        return p;
-      }
-
-      // Fully erases a player's body and removes them from the room/scoreboard.
-      // Used on disconnect — only that player's body/record is touched.
-      removePlayer(id) {
-        const p = this.players.get(id);
-        if (!p) return;
-        p.removeBody();
-        this.players.delete(id);
-        this.scores.delete(id);
-        this.remoteInputs.delete(id);
-        this.updateScoreboardUI();
-      }
-
-      setupLocalPlayers() {
-        for (const p of this.players.values()) p.removeBody();
-        this.players.clear();
-        this.scores.clear();
-        this.matchOver = false;
-        this.mode = 'local';
-        this.loadRandomMap();
-        this.spawnCrates();
-        this.ensurePlayer(0);
-        this.ensurePlayer(1);
-        this.randomizePowers(true);
-        this.crown.reset();
-        this.setStatus('Local 2-player! First to 5 wins • WASD vs Arrows', 3000);
-        ui.setNewMatchEnabled(false);
-        this.updateScoreboardUI();
-      }
-
-      randomizePowers(all) {
-        const ids = all ? [...this.players.keys()] : [...this.players.keys()];
-        ids.forEach(id => {
-          const p = this.players.get(id);
-          p.moveMult = 0.75 + Math.random() * 0.50;
-          p.jumpMult = 0.85 + Math.random() * 0.55;
-        });
-      }
-
-      getSurfacesFor(player) {
-        let surfaces = [...this.platforms, this.ground, ...this.crates];
-        for (const p of this.players.values()) if (p !== player && p.alive) surfaces = surfaces.concat(p.parts);
-        return surfaces;
-      }
-
-      // ---------- rounds / scoring ----------
-      resetRound(newMap = true) {
-        if (newMap) { this.loadRandomMap(); this.spawnCrates(); }
-        const ids = [...this.players.keys()].sort((a, b) => a - b);
-        ids.forEach((id, idx) => {
-          const p = this.players.get(id);
-          const [x, y] = this.spawnForIndex(idx, ids.length);
-          p.spawnBody(x, y);
-          if (newMap) { p.moveMult = 0.75 + Math.random() * 0.50; p.jumpMult = 0.85 + Math.random() * 0.55; }
-        });
-        this.crown.reset();
-        this.updateScoreboardUI();
-        if (newMap) this.setStatus(`🗺 ${this.currentMap.name}`, 2500);
-      }
-
-      newMatch() {
-        for (const id of this.scores.keys()) this.scores.set(id, 0);
-        this.matchOver = false;
-        this.resetRound(true);
-        this.setStatus('New match! First to 5 wins!', 2000);
-        ui.setNewMatchEnabled(false);
-        this.net.broadcastIfHost(this.makeSnapshot());
-      }
-
-      addScore(id, delta) {
-        const s = (this.scores.get(id) || 0) + delta;
-        this.scores.set(id, s);
-        this.updateScoreboardUI();
-        if (s >= SCORE_TO_WIN && !this.matchOver) {
-          this.matchOver = true;
-          this.setStatus(`${this.displayName(id)} WINS THE MATCH!`, 0);
-          ui.setNewMatchEnabled(true);
+        constructor(canvas) {
+            this.engine = Engine.create();
+            this.world = this.engine.world;
+            this.engine.gravity.y = 1.25;
+            this.render = Render.create({
+                canvas,
+                engine: this.engine,
+                options: {
+                    width: WORLD_W,
+                    height: WORLD_H,
+                    wireframes: false,
+                    background: 'transparent',
+                    showAngleIndicator: false
+                }
+            });
+            this.ground = Bodies.rectangle(WORLD_W / 2, 590, 960, 30, {
+                isStatic: true,
+                render: {
+                    fillStyle: '#16213e'
+                },
+                friction: 0.9
+            });
+            Composite.add(this.world,
+                [
+                    this.ground
+                ]);
+            this.platforms = [];
+            this.crates = [];
+            this.powerups = [];
+            this.currentMap = null;
+            this.players = new Map();
+            this.scores = new Map();
+            this.remoteInputs = new Map();
+            this.matchOver = false;
+            this.matchWinnerId = null;
+            this.lastFall = 0;
+            this.mode = 'local';
+            this.selfId = 0;
+            this.keys = {};
+            this.powerupClock = 0;
+            this.laserEffects = [];
+            this.crown = new Crown(this.world);
+            this.net = new NetworkManager(this);
+            this._bindInput();
+            this.setupLocalPlayers();
+            this._bindLoop();
         }
-      }
-
-      checkFalls() {
-        const now = Date.now();
-        if (now - this.lastFall < FALL_DEBOUNCE) return;
-        const fallen = [...this.players.values()].filter(p => p.alive && p.isOutOfBounds());
-        if (!fallen.length) return;
-        this.lastFall = now;
-        fallen.forEach(p => p.removeBody()); // eliminated for the rest of the round
-
-        const remaining = [...this.players.values()].filter(p => p.alive);
-        if (remaining.length <= 1) {
-          const winner = remaining[0];
-          if (winner) {
-            this.addScore(winner.id, 1);
-            this.setStatus(`🏆 ${this.displayName(winner.id)} is the last one standing! +1`);
-          } else {
-            this.setStatus('💥 Double knockout!');
-          }
-          if (!this.matchOver) setTimeout(() => this.resetRound(true), 900);
-        } else {
-          this.setStatus(`${fallen.map(p => this.displayName(p.id)).join(', ')} eliminated!`);
+        // ==========================================================
+        // MAPS
+        // ==========================================================
+        loadRandomMap() {
+            this.loadMapObj(MAPS[Math.floor(Math.random() * MAPS.length)]);
         }
-      }
-
-      updateCrown(dt) {
-        if (this.matchOver) { this.updateCrownTimerUI(); return; }
-        const touchers = [];
-        for (const p of this.players.values()) {
-          if (!p.alive) continue;
-          if (Query.collides(this.crown.body, p.parts).length > 0) touchers.push(p.id);
+        loadMapObj(map) {
+            this.platforms.forEach(p => Composite.remove(this.world, p));
+            this.platforms = [];
+            map.platforms.forEach(
+                ([x, y, w, h, color]) => {
+                    const plat = Bodies.rectangle(x, y, w, h, {
+                        isStatic: true,
+                        render: {
+                            fillStyle: color
+                        },
+                        friction: 0.8
+                    });
+                    this.platforms.push(plat);
+                    Composite.add(this.world, plat);
+                });
+            this.currentMap = map;
         }
-        if (touchers.length > 1) {
-          if (this.crown.holderId !== null) { this.crown.holderId = null; this.crown.timer = 0; this.setStatus('⚔️ Contested!'); }
-        } else if (touchers.length === 1) {
-          const id = touchers[0];
-          if (this.crown.holderId !== id) { this.crown.holderId = id; this.crown.timer = 0; this.setStatus(`${this.displayName(id)} grabbed the crown!`); }
+        spawnCrates(positions) {
+            this.crates.forEach(c => Composite.remove(this.world, c));
+            this.crates = [];
+            (positions || this.currentMap.crates).forEach(
+                ([x, y]) => {
+                    const crate = Bodies.rectangle(x, y, 36, 36, {
+                        density: 0.003,
+                        friction: 0.6,
+                        restitution: 0.2,
+                        render: {
+                            fillStyle: '#f4a261'
+                        },
+                        chamfer: {
+                            radius: 4
+                        }
+                    });
+                    this.crates.push(crate);
+                    Composite.add(this.world, crate);
+                });
         }
-
-        if (this.crown.holderId !== null) {
-          this.crown.timer += dt;
-          if (this.crown.timer >= CROWN_HOLD_TIME) {
-            const id = this.crown.holderId;
-            this.crown.timer = 0; this.crown.holderId = null;
-            Body.setVelocity(this.crown.body, { x: (Math.random() - 0.5) * 18, y: -14 });
-            this.addScore(id, 1);
-            this.setStatus(`👑 ${this.displayName(id)} held the crown! +1`);
-          }
+        clearPowerups() {
+            for (const p of this.powerups) {
+                Composite.remove(this.world, p.body);
+            }
+            this.powerups = [];
+            this.powerupClock = 0;
         }
-
-        const cb = this.crown.body.position;
-        if (cb.y > 700 || cb.x < -100 || cb.x > WORLD_W + 100) {
-          Body.setPosition(this.crown.body, { x: WORLD_W / 2, y: 80 });
-          Body.setVelocity(this.crown.body, { x: 0, y: 0 });
-          this.crown.holderId = null; this.crown.timer = 0;
+        // ==========================================================
+        // PLAYER MANAGEMENT
+        // ==========================================================
+        spawnForIndex(idx, n) {
+            if (n <= 1) {
+                return this.currentMap.blueSpawn;
+            }
+            if (n === 2) {
+                return idx === 0 ? this.currentMap.blueSpawn : this.currentMap.redSpawn;
+            }
+            const margin = 110;
+            const usable = WORLD_W - margin * 2;
+            return [
+                margin + usable * idx / (n - 1),
+                170
+            ];
         }
-        this.updateCrownTimerUI();
-      }
-
-      // ---------- UI helpers ----------
-      displayName(id) {
-        if (this.mode === 'client') return id === this.selfId ? 'You' : `Player ${id + 1}`;
-        if (this.mode === 'host') return id === 0 ? 'You (Host)' : `Player ${id + 1}`;
-        return id === 0 ? 'Player 1' : 'Player 2';
-      }
-
-      setStatus(msg, duration = 2000) {
-        const el = document.getElementById('status');
-        el.textContent = msg;
-        if (duration) {
-          setTimeout(() => {
-            if (this.matchOver) return;
+        sanitizeUsername(name, id) {
+            const cleaned = String(name || '').replace(/\s+/g, ' ').trim().slice(0, 10);
+            return (cleaned || `Player ${id + 1}`);
+        }
+        ensurePlayer(id) {
+            if (this.players.has(id)) {
+                return this.players.get(id);
+            }
+            const n = this.players.size + 1;
+            const ids = [...this.players.keys(),
+                id
+            ].sort(
+                (a, b) => a - b);
+            const idx = ids.indexOf(id);
+            const [
+                x,
+                y
+            ] = this.spawnForIndex(idx, n);
+            const color = PLAYER_COLORS[id % PLAYER_COLORS.length];
+            const p = new RagdollPlayer(this, id, x, y, color);
+            this.players.set(id, p);
+            if (!this.scores.has(id)) {
+                this.scores.set(id, 0);
+            }
+            this.updateScoreboardUI();
+            return p;
+        }
+        removePlayer(id) {
+            const p = this.players.get(id);
+            if (!p) {
+                return;
+            }
+            p.removeBody();
+            this.players.delete(id);
+            this.scores.delete(id);
+            this.remoteInputs.delete(id);
+            this.updateScoreboardUI();
+        }
+        setupLocalPlayers() {
+            for (const p of this.players.values()) {
+                p.removeBody();
+            }
+            this.players.clear();
+            this.scores.clear();
+            this.matchOver = false;
+            this.matchWinnerId = null;
+            this.mode = 'local';
+            this.loadRandomMap();
+            this.spawnCrates();
+            this.clearPowerups();
+            this.ensurePlayer(0);
+            this.ensurePlayer(1);
+            this.players.get(0).username = this.sanitizeUsername(document.getElementById('username').value, 0);
+            this.players.get(1).username = 'Player 2';
+            this.randomizePowers(true);
+            this.crown.reset();
+            this.setStatus('Local 2-player! First to 5 wins • WASD vs Arrows', 3000);
+            ui.setNewMatchEnabled(false);
+            this.updateScoreboardUI();
+        }
+        randomizePowers(all) {
+            const ids = all ? [...this.players.keys()] : [...this.players.keys()];
+            ids.forEach(id => {
+                const p = this.players.get(id);
+                p.moveMult = 0.75 + Math.random() * 0.50;
+                p.jumpMult = 0.85 + Math.random() * 0.55;
+            });
+        }
+        getSurfacesFor(player) {
+            let surfaces = [...this.platforms,
+                this.ground, ...this.crates
+            ];
+            for (const p of this.players.values()) {
+                if (p !== player && p.alive) {
+                    surfaces = surfaces.concat(p.parts);
+                }
+            }
+            return surfaces;
+        }
+        // ==========================================================
+        // ROUND MANAGEMENT
+        // ==========================================================
+        resetRound(newMap = true) {
+            this.clearPowerups();
+            this.laserEffects = [];
+            if (newMap) {
+                this.loadRandomMap();
+                this.spawnCrates();
+            }
+            const ids = [...this.players.keys()].sort(
+                (a, b) => a - b);
+            ids.forEach(
+                (id, idx) => {
+                    const p = this.players.get(id);
+                    p.clearPower();
+                    const [
+                        x,
+                        y
+                    ] = this.spawnForIndex(idx, ids.length);
+                    p.spawnBody(x, y);
+                    if (newMap) {
+                        p.moveMult = 0.75 + Math.random() * 0.50;
+                        p.jumpMult = 0.85 + Math.random() * 0.55;
+                    }
+                });
+            this.crown.reset();
+            this.updateScoreboardUI();
+            if (newMap) {
+                this.setStatus(`🗺 ${this.currentMap.name}`, 2500);
+            }
+        }
+        newMatch() {
+            for (const id of this.scores.keys()) {
+                this.scores.set(id, 0);
+            }
+            this.matchOver = false;
+            this.matchWinnerId = null;
+            this.resetRound(true);
+            this.setStatus('New match! First to 5 wins!', 2000);
+            ui.setNewMatchEnabled(false);
+            this.net.broadcastIfHost(this.makeSnapshot());
+        }
+        addScore(id, delta) {
+            const s = (this.scores.get(id) || 0) + delta;
+            this.scores.set(id, s);
+            this.updateScoreboardUI();
+            if (s >= SCORE_TO_WIN && !this.matchOver) {
+                this.matchOver = true;
+                this.matchWinnerId = id;
+                const finalScores = [...this.scores.entries()].sort(
+                    (a, b) => b[1] - a[1]).map(
+                    ([playerId, score]) => `${this.displayName(playerId)}: ${score}`).join(' • ');
+                this.setStatus(`🏆 ${this.displayName(id)} WINS THE MATCH! FINAL SCORE — ${finalScores}`, 0);
+                ui.setNewMatchEnabled(true);
+            }
+        }
+        eliminatePlayer(id, message = '') {
+            const p = this.players.get(id);
+            if (!p || !p.alive) {
+                return;
+            }
+            p.removeBody();
+            if (message) {
+                this.setStatus(message, 1800);
+            }
+            const remaining = [...this.players.values()].filter(p => p.alive);
+            if (remaining.length <= 1) {
+                const winner = remaining[0];
+                if (winner) {
+                    this.addScore(winner.id, 1);
+                    if (!this.matchOver) {
+                        this.setStatus(`🏆 ${this.displayName(winner.id)} is the last one standing! +1`, 0);
+                    }
+                }
+                if (!this.matchOver) {
+                    setTimeout(
+                        () => this.resetRound(true), 900);
+                }
+            }
+        }
+        checkFalls() {
+            const now = Date.now();
+            if (now - this.lastFall < FALL_DEBOUNCE) {
+                return;
+            }
+            const fallen = [...this.players.values()].filter(p => p.alive && p.isOutOfBounds() && !p.hasPower(POWER_TYPES.GHOST));
+            if (!fallen.length) {
+                return;
+            }
+            this.lastFall = now;
+            fallen.forEach(p => p.removeBody());
+            const remaining = [...this.players.values()].filter(p => p.alive);
+            if (remaining.length <= 1) {
+                const winner = remaining[0];
+                if (winner) {
+                    this.addScore(winner.id, 1);
+                    if (!this.matchOver) {
+                        this.setStatus(`🏆 ${this.displayName(winner.id)} is the last one standing! +1`, 0);
+                    }
+                } else {
+                    this.setStatus('💥 Double knockout!', 1600);
+                }
+                if (!this.matchOver) {
+                    setTimeout(
+                        () => this.resetRound(true), 900);
+                }
+            } else {
+                this.setStatus(`${fallen.map(
+                p =>
+                  this.displayName(p.id)
+              ).join(', ')} eliminated!`, 1600);
+            }
+        }
+        // ==========================================================
+        // CROWN
+        // ==========================================================
+        updateCrown(dt) {
+            if (this.matchOver) {
+                this.updateCrownTimerUI();
+                return;
+            }
+            const touchers = [];
+            for (const p of this.players.values()) {
+                if (!p.alive) {
+                    continue;
+                }
+                if (Query.collides(this.crown.body, p.parts).length > 0) {
+                    touchers.push(p.id);
+                }
+            }
+            if (touchers.length > 1) {
+                if (this.crown.holderId !== null) {
+                    this.crown.holderId = null;
+                    this.crown.timer = 0;
+                    this.setStatus('⚔️ Contested!', 900);
+                }
+            } else if (touchers.length === 1) {
+                const id = touchers[0];
+                if (this.crown.holderId !== id) {
+                    this.crown.holderId = id;
+                    this.crown.timer = 0;
+                    this.setStatus(`${this.displayName(id)} grabbed the crown!`, 1200);
+                }
+            }
+            if (this.crown.holderId !== null) {
+                this.crown.timer += dt;
+                if (this.crown.timer >= CROWN_HOLD_TIME) {
+                    const id = this.crown.holderId;
+                    this.crown.timer = 0;
+                    this.crown.holderId = null;
+                    Body.setVelocity(this.crown.body, {
+                        x: (Math.random() - 0.5) * 18,
+                        y: -14
+                    });
+                    this.addScore(id, 1);
+                    if (!this.matchOver) {
+                        this.setStatus(`👑 ${this.displayName(id)} held the crown! +1`, 1500);
+                    }
+                }
+            }
+            const cb = this.crown.body.position;
+            if (cb.y > 700 || cb.x < -100 || cb.x > WORLD_W + 100) {
+                Body.setPosition(this.crown.body, {
+                    x: WORLD_W / 2,
+                    y: 80
+                });
+                Body.setVelocity(this.crown.body, {
+                    x: 0,
+                    y: 0
+                });
+                this.crown.holderId = null;
+                this.crown.timer = 0;
+            }
+            this.updateCrownTimerUI();
+        }
+        // ==========================================================
+        // POWERUP SPAWNING
+        // ==========================================================
+        spawnPowerup() {
+            if (!this.currentMap || this.matchOver) {
+                return;
+            }
+            const types = Object.values(POWER_TYPES);
+            const type = types[Math.floor(Math.random() * types.length)];
+            const candidates = [...this.currentMap.platforms];
+            const surface = candidates[Math.floor(Math.random() * candidates.length)];
+            let x = surface[0];
+            let y = surface[1] - 35;
+            if (surface[2]) {
+                x += (Math.random() - 0.5) * Math.max(0, surface[2] - 40);
+            }
+            x = Math.max(35, Math.min(WORLD_W - 35, x));
+            const info = POWERUP_INFO[type];
+            const body = Bodies.circle(x, y, 15, {
+                isSensor: true,
+                isStatic: true,
+                label: `powerup:${type}`,
+                render: {
+                    fillStyle: info.color,
+                    strokeStyle: '#ffffff',
+                    lineWidth: 2
+                }
+            });
+            Composite.add(this.world, body);
+            this.powerups.push({
+                body,
+                type,
+                level: 1
+            });
+            this.setStatus(`${info.icon} ${info.name} powerup appeared!`, 1800);
+        }
+        updatePowerupSpawner(dt) {
+            if (this.mode === 'client' || this.matchOver) {
+                return;
+            }
+            this.powerupClock += dt;
+            if (this.powerupClock >= POWERUP_INTERVAL) {
+                this.powerupClock -= POWERUP_INTERVAL;
+                this.spawnPowerup();
+            }
+        }
+        checkPowerupPickups() {
+            if (this.mode === 'client') {
+                return;
+            }
+            for (let i = this.powerups.length - 1; i >= 0; i--) {
+                const pickup = this.powerups[i];
+                let pickedBy = null;
+                for (const p of this.players.values()) {
+                    if (!p.alive) {
+                        continue;
+                    }
+                    if (Query.collides(pickup.body, p.parts).length > 0) {
+                        pickedBy = p;
+                        break;
+                    }
+                }
+                if (!pickedBy) {
+                    continue;
+                }
+                pickedBy.givePower(pickup.type);
+                Composite.remove(this.world, pickup.body);
+                this.powerups.splice(i, 1);
+            }
+        }
+        // ==========================================================
+        // POWER EFFECTS
+        // ==========================================================
+        updatePowerEffects(dt) {
+            if (this.mode === 'client') {
+                return;
+            }
+            for (const p of this.players.values()) {
+                if (!p.alive || !p.powerType) {
+                    continue;
+                }
+                // Timed powers
+                if (p.powerType === POWER_TYPES.GHOST || p.powerType === POWER_TYPES.INVERT) {
+                    p.powerTimer -= dt;
+                    if (p.powerTimer <= 0) {
+                        const expired = POWERUP_INFO[p.powerType].name;
+                        p.clearPower();
+                        this.setStatus(`${this.displayName(p.id)}'s ${expired} expired`, 1200);
+                    }
+                }
+                // Knockback
+                if (p.hasPower(POWER_TYPES.KNOCKBACK)) {
+                    const strength = 0.0012 * p.powerMultiplier();
+                    for (const other of this.players.values()) {
+                        if (other === p || !other.alive || !other.torso) {
+                            continue;
+                        }
+                        const dx = other.torso.position.x - p.torso.position.x;
+                        const dy = other.torso.position.y - p.torso.position.y;
+                        const dist = Math.hypot(dx, dy);
+                        if (dist > 0 && dist < 65) {
+                            const nx = dx / dist;
+                            const ny = dy / dist;
+                            Body.applyForce(other.torso, other.torso.position, {
+                                x: nx * strength,
+                                y: ny * strength * 0.45
+                            });
+                        }
+                    }
+                }
+                // Repulse
+                if (p.hasPower(POWER_TYPES.REPULSE)) {
+                    const strength = 0.0018 * p.powerMultiplier();
+                    for (const other of this.players.values()) {
+                        if (other === p || !other.alive || !other.torso) {
+                            continue;
+                        }
+                        const dx = other.torso.position.x - p.torso.position.x;
+                        const dy = other.torso.position.y - p.torso.position.y;
+                        const dist = Math.hypot(dx, dy);
+                        if (dist > 0 && dist < 130) {
+                            const nx = dx / dist;
+                            const ny = dy / dist;
+                            Body.applyForce(other.torso, other.torso.position, {
+                                x: nx * strength,
+                                y: ny * strength
+                            });
+                        }
+                    }
+                }
+                // Ghost walls
+                if (p.hasPower(POWER_TYPES.GHOST)) {
+                    this.keepInsideGhostWalls(p);
+                }
+            }
+        }
+        keepInsideGhostWalls(p) {
+            if (!p.alive || !p.hasPower(POWER_TYPES.GHOST)) {
+                return;
+            }
+            const minX = 10;
+            const maxX = WORLD_W - 10;
+            const minY = 10;
+            const maxY = WORLD_H - 10;
+            for (const part of p.parts) {
+                let x = part.position.x;
+                let y = part.position.y;
+                let changed = false;
+                if (x < minX) {
+                    x = minX;
+                    changed = true;
+                }
+                if (x > maxX) {
+                    x = maxX;
+                    changed = true;
+                }
+                if (y < minY) {
+                    y = minY;
+                    changed = true;
+                }
+                if (y > maxY) {
+                    y = maxY;
+                    changed = true;
+                }
+                if (changed) {
+                    Body.setPosition(part, {
+                        x,
+                        y
+                    });
+                    Body.setVelocity(part, {
+                        x: part.velocity.x * 0.25,
+                        y: Math.min(0, part.velocity.y)
+                    });
+                }
+            }
+        }
+        // ==========================================================
+        // CONTROL INVERSION
+        // ==========================================================
+        getControlState(player, keyState, keymap) {
+            const result = {
+                ...keyState
+            };
+            const inverted = [...this.players.values()].some(other => other.alive && other !== player && other.hasPower(POWER_TYPES.INVERT) && other.powerTimer > 0);
+            if (!inverted) {
+                return result;
+            }
+            const left = !!keyState[keymap.left];
+            const right = !!keyState[keymap.right];
+            result[keymap.left] = right;
+            result[keymap.right] = left;
+            return result;
+        }
+        // ==========================================================
+        // LASER
+        // ==========================================================
+        fireLaser(player) {
+            if (this.mode === 'client' || !player.alive || !player.hasPower(POWER_TYPES.LASER) || !player.laserReady) {
+                return;
+            }
+            const now = Date.now();
+            if (now - player.lastLaser < 400) {
+                return;
+            }
+            player.lastLaser = now;
+            player.laserReady = false;
+            const start = {
+                x: player.head.position.x,
+                y: player.head.position.y - 12
+            };
+            const end = {
+                x: start.x,
+                y: -30
+            };
+            let hitPlayer = null;
+            let hitDistance = Infinity;
+            for (const other of this.players.values()) {
+                if (other === player || !other.alive) {
+                    continue;
+                }
+                for (const part of other.parts) {
+                    const radius = part.circleRadius || 10;
+                    const hit = this.lineHitsCircle(start, end, part.position, radius);
+                    if (hit !== null && hit < hitDistance) {
+                        hitDistance = hit;
+                        hitPlayer = other;
+                    }
+                }
+            }
+            this.laserEffects.push({
+                start,
+                end,
+                color: player.color,
+                life: 0.18
+            });
+            if (hitPlayer) {
+                this.eliminatePlayer(hitPlayer.id, `${this.displayName(player.id)} blasted ${this.displayName(hitPlayer.id)}!`);
+            }
+            // Laser is consumed.
+            player.powerType = null;
+            player.powerLevel = 0;
+            player.powerTimer = 0;
+            player.updateVisuals();
+        }
+        lineHitsCircle(a, b, center, radius) {
+            const dx = b.x - a.x;
+            const dy = b.y - a.y;
+            const fx = a.x - center.x;
+            const fy = a.y - center.y;
+            const A = dx * dx + dy * dy;
+            const B = 2 * (fx * dx + fy * dy);
+            const C = fx * fx + fy * fy - radius * radius;
+            const discriminant = B * B - 4 * A * C;
+            if (discriminant < 0) {
+                return null;
+            }
+            const sqrt = Math.sqrt(discriminant);
+            const t1 = (-B - sqrt) / (2 * A);
+            const t2 = (-B + sqrt) / (2 * A);
+            let t = Infinity;
+            if (t1 >= 0 && t1 <= 1) {
+                t = t1;
+            }
+            if (t2 >= 0 && t2 <= 1) {
+                t = Math.min(t, t2);
+            }
+            return t === Infinity ? null : t;
+        }
+        // ==========================================================
+        // USER INTERFACE
+        // ==========================================================
+        displayName(id) {
+            if (this.mode === 'client') {
+                return id === this.selfId ? 'You' : (this.players.get(id)?.username || `Player ${id + 1}`);
+            }
+            const p = this.players.get(id);
+            if (p) {
+                return p.username;
+            }
+            return `Player ${id + 1}`;
+        }
+        setStatus(msg, duration = 2000) {
+            const el = document.getElementById('status');
+            el.textContent = msg;
+            if (duration) {
+                setTimeout(
+                    () => {
+                        if (this.matchOver) {
+                            return;
+                        }
+                        const holderId = this.crown.holderId;
+                        el.textContent = holderId !== null && holderId !== undefined && this.players.has(holderId) ? `${this.displayName(holderId)} has the crown!` : 'Fight!';
+                    }, duration);
+            }
+        }
+        updateScoreboardUI() {
+            const el = document.getElementById('scoreboard');
+            if (!el) {
+                return;
+            }
+            const ids = [...this.players.keys()].sort(
+                (a, b) => a - b);
+            el.innerHTML = ids.map(id => {
+                const p = this.players.get(id);
+                const score = this.scores.get(id) || 0;
+                const name = this.displayName(id);
+                const color = p ? p.color : '#888';
+                const opacity = p && !p.alive ? 'opacity:.45;' : '';
+                return (`<div class="score-chip" ` + `style="border-color:${color};color:${color};${opacity}">` + `<span class="dot" ` + `style="background:${color}"></span>` + `${this.escapeHTML(name)}: ${score}` + `</div>`);
+            }).join('');
+        }
+        escapeHTML(value) {
+            return String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+        }
+        updateCrownTimerUI() {
+            const el = document.getElementById('crown-timer');
             const holderId = this.crown.holderId;
-            el.textContent = (holderId !== null && holderId !== undefined && this.players.has(holderId))
-              ? `${this.displayName(holderId)} has the crown!` : 'Fight!';
-          }, duration);
+            if (holderId === null || holderId === undefined || !this.players.has(holderId)) {
+                el.style.display = 'none';
+                return;
+            }
+            const holder = this.players.get(holderId);
+            const remaining = Math.max(0, CROWN_HOLD_TIME - this.crown.timer);
+            el.style.display = 'block';
+            el.textContent = remaining.toFixed(1);
+            el.style.color = holder.color;
+            el.style.borderColor = holder.color + 'aa';
         }
-      }
-
-      updateScoreboardUI() {
-        const el = document.getElementById('scoreboard');
-        if (!el) return;
-        const ids = [...this.players.keys()].sort((a, b) => a - b);
-        el.innerHTML = ids.map(id => {
-          const p = this.players.get(id);
-          const score = this.scores.get(id) || 0;
-          const name = this.displayName(id);
-          const color = p ? p.color : '#888';
-          const opacity = (p && !p.alive) ? 'opacity:.45;' : '';
-          return `<div class="score-chip" style="border-color:${color};color:${color};${opacity}">` +
-                 `<span class="dot" style="background:${color}"></span>${name}: ${score}</div>`;
-        }).join('');
-      }
-
-      updateCrownTimerUI() {
-        const el = document.getElementById('crown-timer');
-        const holderId = this.crown.holderId;
-        if (holderId === null || holderId === undefined || !this.players.has(holderId)) {
-          el.style.display = 'none';
-          return;
+        // ==========================================================
+        // INPUT
+        // ==========================================================
+        _bindInput() {
+            window.addEventListener('keydown', e => {
+                this.keys[e.code] = true;
+                if (
+                    ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) {
+                    e.preventDefault();
+                }
+                // Laser
+                if (e.code === 'Space' && !e.repeat) {
+                    if (this.mode === 'local') {
+                        const p = this.players.get(1);
+                        if (p && p.alive) {
+                            this.fireLaser(p);
+                        }
+                    } else if (this.mode === 'host') {
+                        const p = this.players.get(0);
+                        if (p && p.alive) {
+                            this.fireLaser(p);
+                        }
+                    }
+                }
+            });
+            window.addEventListener('blur',
+                () => {
+                    for (const k in this.keys) {
+                        this.keys[k] = false;
+                    }
+                });
+            window.addEventListener('keyup', e => {
+                this.keys[e.code] = false;
+            });
         }
-        const holder = this.players.get(holderId);
-        const remaining = Math.max(0, CROWN_HOLD_TIME - this.crown.timer);
-        el.style.display = 'block';
-        el.textContent = remaining.toFixed(1);
-        el.style.color = holder.color;
-        el.style.borderColor = holder.color + 'aa';
-      }
-
-      // ---------- input ----------
-      _bindInput() {
-        window.addEventListener('keydown', e => {
-          this.keys[e.code] = true;
-          if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) e.preventDefault();
-        });
-        window.addEventListener('blur', () => { for (const k in this.keys) this.keys[k] = false; });
-        window.addEventListener('keyup', e => { this.keys[e.code] = false; });
-      }
-      getArrowKeys() {
-        return {
-          ArrowLeft: !!this.keys.ArrowLeft, ArrowRight: !!this.keys.ArrowRight,
-          ArrowUp: !!this.keys.ArrowUp, ArrowDown: !!this.keys.ArrowDown
-        };
-      }
-
-      // ---------- networking snapshots ----------
-      makeSnapshot() {
-        const bodies = [];
-        for (const p of this.players.values()) bodies.push(...p.serialize());
-        if (this.crown.body) {
-          bodies.push({
-            id: 'crown', x: this.crown.body.position.x, y: this.crown.body.position.y, a: this.crown.body.angle,
-            vx: this.crown.body.velocity.x, vy: this.crown.body.velocity.y, av: this.crown.body.angularVelocity
-          });
+        getArrowKeys() {
+            return {
+                ArrowLeft: !!this.keys.ArrowLeft,
+                ArrowRight: !!this.keys.ArrowRight,
+                ArrowUp: !!this.keys.ArrowUp,
+                ArrowDown: !!this.keys.ArrowDown,
+                Space: !!this.keys.Space
+            };
         }
-        return {
-          type: 'state',
-          mapIndex: MAPS.indexOf(this.currentMap),
-          roster: [...this.players.values()].map(p => ({ id: p.id, color: p.color, alive: p.alive, moveMult: p.moveMult, jumpMult: p.jumpMult })),
-          scores: Object.fromEntries(this.scores),
-          matchOver: this.matchOver,
-          crownHolder: this.crown.holderId,
-          crownTimer: this.crown.timer,
-          crates: this.crates.map(c => ({ x: c.position.x, y: c.position.y, a: c.angle, vx: c.velocity.x, vy: c.velocity.y, av: c.angularVelocity })),
-          bodies
-        };
-      }
-
-      applySnapshot(msg) {
-        const map = MAPS[msg.mapIndex] || MAPS[0];
-        if (this.currentMap !== map) { this.loadMapObj(map); this.spawnCrates(); }
-
-        this.scores = new Map(Object.entries(msg.scores || {}).map(([k, v]) => [Number(k), v]));
-        this.matchOver = !!msg.matchOver;
-        this.crown.holderId = (msg.crownHolder === undefined) ? null : msg.crownHolder;
-        this.crown.timer = Number(msg.crownTimer) || 0;
-
-        const incomingIds = new Set((msg.roster || []).map(r => r.id));
-        for (const id of [...this.players.keys()]) {
-          if (!incomingIds.has(id)) { this.players.get(id).removeBody(); this.players.delete(id); }
+        // ==========================================================
+        // SNAPSHOTS
+        // ==========================================================
+        makeSnapshot() {
+            const bodies = [];
+            for (const p of this.players.values()) {
+                bodies.push(...p.serialize());
+            }
+            if (this.crown.body) {
+                bodies.push({
+                    id: 'crown',
+                    x: this.crown.body.position.x,
+                    y: this.crown.body.position.y,
+                    a: this.crown.body.angle,
+                    vx: this.crown.body.velocity.x,
+                    vy: this.crown.body.velocity.y,
+                    av: this.crown.body.angularVelocity
+                });
+            }
+            return {
+                type: 'state',
+                mapIndex: MAPS.indexOf(this.currentMap),
+                roster: [...this.players.values()].map(p => ({
+                    id: p.id,
+                    color: p.color,
+                    username: p.username,
+                    alive: p.alive,
+                    moveMult: p.moveMult,
+                    jumpMult: p.jumpMult,
+                    power: p.serializePower()
+                })),
+                scores: Object.fromEntries(this.scores),
+                matchOver: this.matchOver,
+                winnerId: this.matchWinnerId,
+                crownHolder: this.crown.holderId,
+                crownTimer: this.crown.timer,
+                crates: this.crates.map(c => ({
+                    x: c.position.x,
+                    y: c.position.y,
+                    a: c.angle,
+                    vx: c.velocity.x,
+                    vy: c.velocity.y,
+                    av: c.angularVelocity
+                })),
+                powerups: this.powerups.map(p => ({
+                    type: p.type,
+                    level: p.level,
+                    x: p.body.position.x,
+                    y: p.body.position.y
+                })),
+                bodies
+            };
         }
-        for (const r of (msg.roster || [])) {
-          let p = this.players.get(r.id);
-          if (!p) { p = new RagdollPlayer(this, r.id, WORLD_W / 2, -300, r.color); p.removeBody(); this.players.set(r.id, p); }
-          p.color = r.color; p.moveMult = r.moveMult; p.jumpMult = r.jumpMult;
-          if (r.alive && p.parts.length === 0) p.spawnBody(WORLD_W / 2, -300);
-          if (!r.alive && p.parts.length > 0) p.removeBody();
+        applySnapshot(msg) {
+            const map = MAPS[msg.mapIndex] || MAPS[0];
+            if (this.currentMap !== map) {
+                this.loadMapObj(map);
+                this.spawnCrates();
+            }
+            this.scores = new Map(Object.entries(msg.scores || {}).map(
+                ([k, v]) => [
+                    Number(k),
+                    Number(v)
+                ]));
+            this.matchOver = !!msg.matchOver;
+            this.matchWinnerId = msg.winnerId === null || msg.winnerId === undefined ? null : Number(msg.winnerId);
+            this.crown.holderId = msg.crownHolder === undefined ? null : msg.crownHolder;
+            this.crown.timer = Number(msg.crownTimer) || 0;
+            // --------------------------------------------------------
+            // Roster
+            // --------------------------------------------------------
+            const incomingIds = new Set(
+                (msg.roster || []).map(r => r.id));
+            for (const id of [...this.players.keys()]) {
+                if (!incomingIds.has(id)) {
+                    this.players.get(id).removeBody();
+                    this.players.delete(id);
+                }
+            }
+            for (const r of (msg.roster || [])) {
+                let p = this.players.get(r.id);
+                if (!p) {
+                    p = new RagdollPlayer(this, r.id, WORLD_W / 2, -300, r.color);
+                    p.removeBody();
+                    this.players.set(r.id, p);
+                }
+                p.color = r.color;
+                p.username = this.sanitizeUsername(r.username, r.id);
+                p.moveMult = r.moveMult;
+                p.jumpMult = r.jumpMult;
+                if (r.power) {
+                    p.powerType = r.power.type || null;
+                    p.powerLevel = Number(r.power.level) || 0;
+                    p.powerTimer = Number(r.power.timer) || 0;
+                    p.laserReady = !!r.power.laserReady;
+                } else {
+                    p.clearPower();
+                }
+                if (r.alive && p.parts.length === 0) {
+                    p.spawnBody(WORLD_W / 2, -300);
+                }
+                if (!r.alive && p.parts.length > 0) {
+                    p.removeBody();
+                }
+                p.updateVisuals();
+            }
+            // --------------------------------------------------------
+            // Crates
+            // --------------------------------------------------------
+            if (Array.isArray(msg.crates) && msg.crates.length === this.crates.length) {
+                msg.crates.forEach(
+                    (st, i) => {
+                        const c = this.crates[i];
+                        Body.setPosition(c, {
+                            x: st.x,
+                            y: st.y
+                        });
+                        Body.setAngle(c, st.a);
+                        Body.setVelocity(c, {
+                            x: st.vx,
+                            y: st.vy
+                        });
+                        Body.setAngularVelocity(c, st.av);
+                    });
+            }
+            // --------------------------------------------------------
+            // Powerups
+            // --------------------------------------------------------
+            const incomingPowerups = msg.powerups || [];
+            while (this.powerups.length > incomingPowerups.length) {
+                const removed = this.powerups.pop();
+                Composite.remove(this.world, removed.body);
+            }
+            while (this.powerups.length < incomingPowerups.length) {
+                const data = incomingPowerups[this.powerups.length];
+                const info = POWERUP_INFO[data.type];
+                const body = Bodies.circle(data.x, data.y, 15, {
+                    isSensor: true,
+                    isStatic: true,
+                    label: `powerup:${data.type}`,
+                    render: {
+                        fillStyle: info.color,
+                        strokeStyle: '#ffffff',
+                        lineWidth: 2
+                    }
+                });
+                Composite.add(this.world, body);
+                this.powerups.push({
+                    body,
+                    type: data.type,
+                    level: data.level || 1
+                });
+            }
+            incomingPowerups.forEach(
+                (data, i) => {
+                    const p = this.powerups[i];
+                    if (!p) {
+                        return;
+                    }
+                    p.type = data.type;
+                    p.level = data.level || 1;
+                    Body.setPosition(p.body, {
+                        x: data.x,
+                        y: data.y
+                    });
+                    p.body.render.fillStyle = POWERUP_INFO[data.type].color;
+                });
+            // --------------------------------------------------------
+            // Bodies
+            // --------------------------------------------------------
+            const byLabel = new Map(
+                (msg.bodies || []).map(b => [
+                    b.id,
+                    b
+                ]));
+            for (const p of this.players.values()) {
+                p.applyPartStates(byLabel);
+            }
+            // Crown
+            if (this.crown.body) {
+                const st = byLabel.get('crown');
+                if (st) {
+                    Body.setPosition(this.crown.body, {
+                        x: st.x,
+                        y: st.y
+                    });
+                    Body.setAngle(this.crown.body, st.a);
+                    Body.setVelocity(this.crown.body, {
+                        x: st.vx,
+                        y: st.vy
+                    });
+                }
+            }
+            this.updateScoreboardUI();
+            this.updateCrownTimerUI();
+            // Final score shown to clients
+            if (this.matchOver) {
+                const finalScores = [...this.scores.entries()].sort(
+                    (a, b) => b[1] - a[1]).map(
+                    ([id, score]) => `${this.displayName(id)}: ${score}`).join(' • ');
+                const winner = this.matchWinnerId !== null ? this.displayName(this.matchWinnerId) : 'Winner';
+                this.setStatus(`🏆 ${winner} WINS! FINAL SCORE — ${finalScores}`, 0);
+            }
+            ui.setNewMatchEnabled(this.matchOver);
         }
-
-        if (Array.isArray(msg.crates) && msg.crates.length === this.crates.length) {
-          msg.crates.forEach((st, i) => {
-            const c = this.crates[i];
-            Body.setPosition(c, { x: st.x, y: st.y }); Body.setAngle(c, st.a);
-            Body.setVelocity(c, { x: st.vx, y: st.vy }); Body.setAngularVelocity(c, st.av);
-          });
+        // ==========================================================
+        // MAIN LOOP
+        // ==========================================================
+        _bindLoop() {
+            this._lastTime = performance.now();
+            Events.on(this.engine, 'beforeUpdate',
+                () => {
+                    if (this.matchOver) {
+                        return;
+                    }
+                    const now = performance.now();
+                    const dt = Math.min(0.05,
+                        (now - this._lastTime) / 1000);
+                    this._lastTime = now;
+                    // Client does not simulate physics.
+                    if (this.mode === 'client') {
+                        for (const p of this.players.values()) {
+                            p.freeze();
+                        }
+                        if (this.crown.body) {
+                            Body.setVelocity(this.crown.body, {
+                                x: 0,
+                                y: 0
+                            });
+                            Body.setAngularVelocity(this.crown.body, 0);
+                        }
+                        for (const c of this.crates) {
+                            Body.setVelocity(c, {
+                                x: 0,
+                                y: 0
+                            });
+                            Body.setAngularVelocity(c, 0);
+                        }
+                        return;
+                    }
+                    // ----------------------------------------------------
+                    // Host / Local simulation
+                    // ----------------------------------------------------
+                    for (const p of this.players.values()) {
+                        // Local:
+                        // P1 = WASD
+                        // P2 = arrows
+                        //
+                        // Online:
+                        // Host = arrows
+                        // Joined = arrows
+                        const keymap = this.mode === 'local' ? (p.id === 0 ? KEYMAP_WASD : KEYMAP_ARROWS) : KEYMAP_ARROWS;
+                        let keyState = (this.mode === 'host' && p.id !== 0) ? (this.remoteInputs.get(p.id) || {}) : this.keys;
+                        keyState = this.getControlState(p, keyState, keymap);
+                        p.applyControl(keyState, keymap);
+                        // Anchor:
+                        // if not actively controlling,
+                        // stop all movement.
+                        if (p.hasPower(POWER_TYPES.ANCHOR)) {
+                            const activeInput = !!keyState[keymap.left] || !!keyState[keymap.right] || !!keyState[keymap.jump] || !!keyState[keymap.slam];
+                            if (!activeInput) {
+                                p.freeze();
+                            }
+                        }
+                        // Joined player laser
+                        if (this.mode === 'host' && p.id !== 0 && keyState.Space) {
+                            this.fireLaser(p);
+                        }
+                    }
+                    this.checkFalls();
+                    this.updateCrown(dt);
+                    this.updatePowerupSpawner(dt);
+                    this.checkPowerupPickups();
+                    this.updatePowerEffects(dt);
+                    // ----------------------------------------------------
+                    // Host snapshots
+                    // ----------------------------------------------------
+                    if (this.mode === 'host') {
+                        this.net.snapshotClock += dt;
+                        if (this.net.snapshotClock >= 0.033) {
+                            this.net.snapshotClock = 0;
+                            this.net.broadcastIfHost(this.makeSnapshot());
+                        }
+                    }
+                });
+            // Anchor enforcement after physics.
+            Events.on(this.engine, 'afterUpdate',
+                () => {
+                    if (this.mode === 'client') {
+                        return;
+                    }
+                    for (const p of this.players.values()) {
+                        if (!p.alive || !p.hasPower(POWER_TYPES.ANCHOR)) {
+                            continue;
+                        }
+                        const keymap = this.mode === 'local' ? (p.id === 0 ? KEYMAP_WASD : KEYMAP_ARROWS) : KEYMAP_ARROWS;
+                        const keys = (this.mode === 'host' && p.id !== 0) ? (this.remoteInputs.get(p.id) || {}) : this.keys;
+                        const active = !!keys[keymap.left] || !!keys[keymap.right] || !!keys[keymap.jump] || !!keys[keymap.slam];
+                        if (!active) {
+                            p.freeze();
+                        }
+                    }
+                });
+            // --------------------------------------------------------
+            // Drawing
+            // --------------------------------------------------------
+            Events.on(this.render, 'afterRender',
+                () => {
+                    const ctx = this.render.context;
+                    // Crown holder glow
+                    const holderId = this.crown.holderId;
+                    if (this.crown.body && holderId !== null && holderId !== undefined) {
+                        const holder = this.players.get(holderId);
+                        if (holder) {
+                            ctx.save();
+                            ctx.beginPath();
+                            ctx.arc(this.crown.body.position.x, this.crown.body.position.y, 22, 0, Math.PI * 2);
+                            ctx.fillStyle = holder.color + '40';
+                            ctx.fill();
+                            ctx.restore();
+                        }
+                    }
+                    // ----------------------------------------------------
+                    // Powerup pickups
+                    // ----------------------------------------------------
+                    for (const pickup of this.powerups) {
+                        const info = POWERUP_INFO[pickup.type];
+                        const x = pickup.body.position.x;
+                        const y = pickup.body.position.y;
+                        ctx.save();
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.font = '18px Segoe UI, sans-serif';
+                        ctx.shadowColor = info.color;
+                        ctx.shadowBlur = 12;
+                        ctx.fillStyle = info.color;
+                        ctx.fillText(info.icon, x, y);
+                        ctx.restore();
+                    }
+                    // ----------------------------------------------------
+                    // Player usernames / power counters
+                    // ----------------------------------------------------
+                    for (const p of this.players.values()) {
+                        if (!p.alive || !p.head) {
+                            continue;
+                        }
+                        const x = p.head.position.x;
+                        const y = p.head.position.y - 28;
+                        ctx.save();
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        // Username
+                        ctx.font = 'bold 14px Segoe UI, sans-serif';
+                        ctx.fillStyle = 'rgba(0,0,0,0.75)';
+                        ctx.fillText(p.username, x + 1, y + 1);
+                        ctx.fillStyle = p.color;
+                        ctx.fillText(p.username, x, y);
+                        // Power label
+                        if (p.powerType) {
+                            const info = POWERUP_INFO[p.powerType];
+                            const powerY = y - 20;
+                            ctx.font = 'bold 12px Segoe UI, sans-serif';
+                            ctx.fillStyle = info.color;
+                            let label = `${info.icon} ${info.name}`;
+                            if (p.powerLevel > 1) {
+                                label += ` Lv.${p.powerLevel}`;
+                            }
+                            if (p.powerTimer > 0) {
+                                label += ` ${Math.ceil(p.powerTimer)}s`;
+                            }
+                            if (p.powerType === POWER_TYPES.LASER && p.laserReady) {
+                                label += ' • SPACE';
+                            }
+                            ctx.fillText(label, x, powerY);
+                        }
+                        ctx.restore();
+                    }
+                    // ----------------------------------------------------
+                    // Ghost walls
+                    // ----------------------------------------------------
+                    for (const p of this.players.values()) {
+                        if (!p.alive || !p.hasPower(POWER_TYPES.GHOST)) {
+                            continue;
+                        }
+                        ctx.save();
+                        ctx.strokeStyle = p.color;
+                        ctx.globalAlpha = 0.45;
+                        ctx.lineWidth = 5;
+                        ctx.setLineDash([
+                            12,
+                            10
+                        ]);
+                        ctx.strokeRect(18, 18, WORLD_W - 36, WORLD_H - 48);
+                        ctx.restore();
+                    }
+                    // ----------------------------------------------------
+                    // Laser effects
+                    // ----------------------------------------------------
+                    for (let i = this.laserEffects.length - 1; i >= 0; i--) {
+                        const laser = this.laserEffects[i];
+                        ctx.save();
+                        ctx.globalAlpha = Math.max(0, laser.life / 0.18);
+                        ctx.strokeStyle = laser.color;
+                        ctx.shadowColor = laser.color;
+                        ctx.shadowBlur = 18;
+                        ctx.lineWidth = 8;
+                        ctx.beginPath();
+                        ctx.moveTo(laser.start.x, laser.start.y);
+                        ctx.lineTo(laser.end.x, laser.end.y);
+                        ctx.stroke();
+                        ctx.restore();
+                        laser.life -= 1 / 60;
+                        if (laser.life <= 0) {
+                            this.laserEffects.splice(i, 1);
+                        }
+                    }
+                });
+            Render.run(this.render);
+            Runner.run(Runner.create(), this.engine);
         }
-
-        const byLabel = new Map((msg.bodies || []).map(b => [b.id, b]));
-        for (const p of this.players.values()) p.applyPartStates(byLabel);
-        if (this.crown.body) {
-          const st = byLabel.get('crown');
-          if (st) {
-            Body.setPosition(this.crown.body, { x: st.x, y: st.y });
-            Body.setAngle(this.crown.body, st.a);
-          }
-        }
-
-        this.updateScoreboardUI();
-        this.updateCrownTimerUI();
-        ui.setNewMatchEnabled(this.matchOver);
-      }
-
-      // ---------- main loop ----------
-      _bindLoop() {
-        this._lastTime = performance.now();
-        Events.on(this.engine, 'beforeUpdate', () => {
-          if (this.matchOver) return;
-          const now = performance.now();
-          const dt = Math.min(0.05, (now - this._lastTime) / 1000);
-          this._lastTime = now;
-
-          if (this.mode === 'client') {
-            for (const p of this.players.values()) p.freeze();
-            if (this.crown.body) { Body.setVelocity(this.crown.body, { x: 0, y: 0 }); Body.setAngularVelocity(this.crown.body, 0); }
-            for (const c of this.crates) { Body.setVelocity(c, { x: 0, y: 0 }); Body.setAngularVelocity(c, 0); }
-            return;
-          }
-
-          for (const p of this.players.values()) {
-            const keymap = p.id === 0 ? KEYMAP_WASD : KEYMAP_ARROWS;
-            const keyState = (this.mode === 'host' && p.id !== 0) ? (this.remoteInputs.get(p.id) || {}) : this.keys;
-            p.applyControl(keyState, keymap);
-          }
-          this.checkFalls();
-          this.updateCrown(dt);
-
-          if (this.mode === 'host') {
-            this.net.snapshotClock += dt;
-            if (this.net.snapshotClock >= 0.033) { this.net.snapshotClock = 0; this.net.broadcastIfHost(this.makeSnapshot()); }
-          }
-        });
-
-        Events.on(this.render, 'afterRender', () => {
-          const holderId = this.crown.holderId;
-          if (!this.crown.body || holderId === null || holderId === undefined) return;
-          const holder = this.players.get(holderId);
-          if (!holder) return;
-          const ctx = this.render.context;
-          ctx.beginPath();
-          ctx.arc(this.crown.body.position.x, this.crown.body.position.y, 22, 0, Math.PI * 2);
-          ctx.fillStyle = holder.color + '40';
-          ctx.fill();
-        });
-
-        Render.run(this.render);
-        Runner.run(Runner.create(), this.engine);
-      }
     }
-
-    // ========================= NETWORKING =========================
+    // ============================================================
+    // NETWORKING
+    // ============================================================
     class NetworkManager {
-      constructor(game) {
-        this.game = game;
-        this.peer = null;
-        this.role = 'local'; // local | host | client
-        this.connections = new Map(); // host: playerId -> DataConnection
-        this.conn = null;             // client: DataConnection to host
-        this.nextPlayerId = 1;
-        this.snapshotClock = 0;
-        this.peerLoader = null;
-        this.inputInterval = null;
-      }
-
-      async _loadPeerJS() {
-        if (window.Peer) return window.Peer;
-        if (this.peerLoader) return this.peerLoader;
-        this.peerLoader = new Promise((resolve, reject) => {
-          const s = document.createElement('script');
-          s.src = 'https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js';
-          s.async = true;
-          s.onload = () => window.Peer ? resolve(window.Peer) : reject(new Error('PeerJS loaded but Peer is unavailable'));
-          s.onerror = () => reject(new Error('Could not load PeerJS'));
-          document.head.appendChild(s);
-        });
-        return this.peerLoader;
-      }
-
-      async hostRoom() {
-        this.disconnect(false);
-        ui.setNetStatus('Loading online multiplayer…');
-        try {
-          const PeerClass = await this._loadPeerJS();
-          this.role = 'host';
-          this.game.mode = 'host';
-          this.nextPlayerId = 1;
-
-          // Reset the room to just the host (id 0) as player one.
-          for (const p of this.game.players.values()) p.removeBody();
-          this.game.players.clear(); this.game.scores.clear();
-          this.game.matchOver = false;
-          this.game.loadRandomMap(); this.game.spawnCrates();
-          this.game.ensurePlayer(0);
-          this.game.randomizePowers(true);
-          this.game.crown.reset();
-
-          this.peer = new PeerClass();
-          this.peer.on('open', id => {
-            document.getElementById('room-id').value = id;
-            ui.setNetStatus(`Hosting • share this Host ID • 1/${MAX_PLAYERS} players`);
-          });
-          this.peer.on('connection', c => this._acceptConnection(c));
-          this.peer.on('error', err => ui.setNetStatus('Peer error: ' + (err.type || err.message)));
-          ui.showOnlineControls(true);
-          ui.setNewMatchEnabled(false);
-          this.game.setStatus('Hosting online! Waiting for players…', 2500);
-        } catch (err) {
-          this.role = 'local'; this.game.mode = 'local';
-          ui.setNetStatus(err.message);
+        constructor(game) {
+            this.game = game;
+            this.peer = null;
+            this.role = 'local';
+            this.connections = new Map();
+            this.conn = null;
+            this.nextPlayerId = 1;
+            this.snapshotClock = 0;
+            this.peerLoader = null;
+            this.inputInterval = null;
         }
-      }
-
-      _acceptConnection(c) {
-        if (this.connections.size + 1 >= MAX_PLAYERS) {
-          c.on('open', () => { c.send({ type: 'full' }); setTimeout(() => { try { c.close(); } catch (_) {} }, 200); });
-          return;
+        async _loadPeerJS() {
+            if (window.Peer) {
+                return window.Peer;
+            }
+            if (this.peerLoader) {
+                return this.peerLoader;
+            }
+            this.peerLoader = new Promise(
+                (resolve, reject) => {
+                    const s = document.createElement('script');
+                    s.src = 'https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js';
+                    s.async = true;
+                    s.onload = () => {
+                        window.Peer ? resolve(window.Peer) : reject(new Error('PeerJS loaded but Peer is unavailable'));
+                    };
+                    s.onerror = () => reject(new Error('Could not load PeerJS'));
+                    document.head.appendChild(s);
+                });
+            return this.peerLoader;
         }
-        const id = this.nextPlayerId++;
-        this.connections.set(id, c);
-        c.on('open', () => {
-          this.game.ensurePlayer(id);
-          c.send({ type: 'welcome', yourId: id });
-          this.game.setStatus(`${this.game.displayName(id)} connected!`, 1800);
-          this.broadcastIfHost(this.game.makeSnapshot());
-          ui.setNetStatus(`Hosting • ${this.connections.size + 1}/${MAX_PLAYERS} players`);
-        });
-        c.on('data', msg => {
-          if (!msg || typeof msg !== 'object') return;
-          if (msg.type === 'input') {
-            this.game.remoteInputs.set(id, msg.keys || {});
-          } else if (msg.type === 'new-match-request') {
-            if (this.game.matchOver) this.game.newMatch();
-          } else if (msg.type === 'request-state') {
-            if (c.open) c.send(this.game.makeSnapshot());
-          }
-        });
-        c.on('close', () => this._dropConnection(id));
-        c.on('error', () => this._dropConnection(id));
-      }
-
-      // Disconnect: erase ONLY that joined player's body/score — nobody else is affected.
-      _dropConnection(id) {
-        if (!this.connections.has(id)) return;
-        this.connections.delete(id);
-        this.game.removePlayer(id);
-        this.game.setStatus(`Player ${id + 1} disconnected`, 1800);
-        this.broadcastIfHost(this.game.makeSnapshot());
-        ui.setNetStatus(`Hosting • ${this.connections.size + 1}/${MAX_PLAYERS} players`);
-      }
-
-      _broadcast(msg) { for (const c of this.connections.values()) if (c.open) c.send(msg); }
-      broadcastIfHost(msg) { if (this.role === 'host') this._broadcast(msg); }
-
-      async joinRoom(hostId) {
-        if (!hostId) { ui.setNetStatus('Enter the host ID first'); return; }
-        this.disconnect(false);
-        ui.setNetStatus('Loading online multiplayer…');
-        try {
-          const PeerClass = await this._loadPeerJS();
-          this.role = 'client';
-          this.game.mode = 'client';
-          this.peer = new PeerClass();
-          this.peer.on('open', () => {
-            this.conn = this.peer.connect(hostId, { reliable: false, serialization: 'json' });
-            this._setupClientConn();
-          });
-          this.peer.on('error', err => ui.setNetStatus('Peer error: ' + (err.type || err.message)));
-        } catch (err) {
-          this.role = 'local'; this.game.mode = 'local';
-          ui.setNetStatus(err.message);
+        async hostRoom() {
+            this.disconnect(false);
+            ui.setNetStatus('Loading online multiplayer…');
+            try {
+                const PeerClass = await this._loadPeerJS();
+                this.role = 'host';
+                this.game.mode = 'host';
+                this.nextPlayerId = 1;
+                // Reset room to host.
+                for (const p of this.game.players.values()) {
+                    p.removeBody();
+                }
+                this.game.players.clear();
+                this.game.scores.clear();
+                this.game.remoteInputs.clear();
+                this.game.matchOver = false;
+                this.game.matchWinnerId = null;
+                this.game.loadRandomMap();
+                this.game.spawnCrates();
+                this.game.clearPowerups();
+                this.game.ensurePlayer(0);
+                this.game.players.get(0).username = this.game.sanitizeUsername(document.getElementById('username').value, 0);
+                this.game.randomizePowers(true);
+                this.game.crown.reset();
+                this.peer = new PeerClass();
+                this.peer.on('open', id => {
+                    document.getElementById('room-id').value = id;
+                    ui.setNetStatus(`Hosting • share this Host ID • 1/${MAX_PLAYERS} players`);
+                });
+                this.peer.on('connection', c => this._acceptConnection(c));
+                this.peer.on('error', err => ui.setNetStatus('Peer error: ' + (err.type || err.message)));
+                ui.showOnlineControls(true);
+                ui.setNewMatchEnabled(false);
+                this.game.setStatus('Hosting online! Arrow keys to move • Space = laser', 2500);
+            } catch (err) {
+                this.role = 'local';
+                this.game.mode = 'local';
+                ui.setNetStatus(err.message);
+            }
         }
-      }
-
-      _setupClientConn() {
-        const c = this.conn;
-        c.on('open', () => {
-          ui.setNetStatus('Connected online…');
-          ui.showOnlineControls(true);
-          ui.setNewMatchEnabled(false);
-          c.send({ type: 'request-state' });
-        });
-        c.on('data', msg => {
-          if (!msg || typeof msg !== 'object') return;
-          if (msg.type === 'welcome') {
-            this.game.selfId = msg.yourId;
-            ui.setNetStatus(`Connected online • you are Player ${msg.yourId + 1}`);
-          } else if (msg.type === 'full') {
-            ui.setNetStatus('Room is full (10/10 players)');
-            this.disconnect();
-          } else if (msg.type === 'state') {
-            this.game.applySnapshot(msg);
-          }
-        });
-        c.on('close', () => { ui.setNetStatus('Disconnected from host'); this.disconnect(); });
-        c.on('error', err => ui.setNetStatus('Network error: ' + (err.type || err.message)));
-
-        if (this.inputInterval) clearInterval(this.inputInterval);
-        this.inputInterval = setInterval(() => {
-          if (this.role === 'client' && c.open) c.send({ type: 'input', keys: this.game.getArrowKeys() });
-        }, 30);
-      }
-
-      requestNewMatch() {
-        if (this.role === 'host') { if (this.game.matchOver) this.game.newMatch(); }
-        else if (this.role === 'client') { if (this.conn && this.conn.open) this.conn.send({ type: 'new-match-request' }); }
-        else { this.game.newMatch(); }
-      }
-
-      disconnect(resetToLocal = true) {
-        for (const c of this.connections.values()) { try { c.close(); } catch (_) {} }
-        this.connections.clear();
-        if (this.conn) { try { this.conn.close(); } catch (_) {} }
-        if (this.peer) { try { this.peer.destroy(); } catch (_) {} }
-        if (this.inputInterval) { clearInterval(this.inputInterval); this.inputInterval = null; }
-        this.conn = null; this.peer = null;
-        this.role = 'local';
-        this.nextPlayerId = 1;
-        this.game.remoteInputs.clear();
-        if (resetToLocal) {
-          this.game.setupLocalPlayers();
-          ui.showOnlineControls(false);
-          ui.setNetStatus('Local 2-player');
+        _acceptConnection(c) {
+            if (this.connections.size + 1 >= MAX_PLAYERS) {
+                c.on('open',
+                    () => {
+                        c.send({
+                            type: 'full'
+                        });
+                        setTimeout(
+                            () => {
+                                try {
+                                    c.close();
+                                } catch (_) {}
+                            }, 200);
+                    });
+                return;
+            }
+            const id = this.nextPlayerId++;
+            this.connections.set(id, c);
+            c.on('open',
+                () => {
+                    this.game.ensurePlayer(id);
+                    c.send({
+                        type: 'welcome',
+                        yourId: id
+                    });
+                    this.game.setStatus(`${this.game.displayName(id)} connected!`, 1800);
+                    this.broadcastIfHost(this.game.makeSnapshot());
+                    ui.setNetStatus(`Hosting • ${this.connections.size + 1}/${MAX_PLAYERS} players`);
+                });
+            c.on('data', msg => {
+                if (!msg || typeof msg !== 'object') {
+                    return;
+                }
+                // Username
+                if (msg.type === 'join-info') {
+                    const p = this.game.players.get(id);
+                    if (p) {
+                        p.username = this.game.sanitizeUsername(msg.username, id);
+                    }
+                    this.broadcastIfHost(this.game.makeSnapshot());
+                    return;
+                }
+                // Input
+                if (msg.type === 'input') {
+                    this.game.remoteInputs.set(id, msg.keys || {});
+                    // Remote laser
+                    if (msg.keys && msg.keys.Space) {
+                        const p = this.game.players.get(id);
+                        if (p && p.alive && p.hasPower(POWER_TYPES.LASER)) {
+                            this.game.fireLaser(p);
+                        }
+                    }
+                    return;
+                }
+                // New match
+                if (msg.type === 'new-match-request') {
+                    if (this.game.matchOver) {
+                        this.game.newMatch();
+                    }
+                    return;
+                }
+                // State request
+                if (msg.type === 'request-state') {
+                    if (c.open) {
+                        c.send(this.game.makeSnapshot());
+                    }
+                }
+            });
+            c.on('close',
+                () => this._dropConnection(id));
+            c.on('error',
+                () => this._dropConnection(id));
         }
-      }
+        _dropConnection(id) {
+            if (!this.connections.has(id)) {
+                return;
+            }
+            this.connections.delete(id);
+            this.game.removePlayer(id);
+            this.game.setStatus(`Player ${id + 1} disconnected`, 1800);
+            this.broadcastIfHost(this.game.makeSnapshot());
+            ui.setNetStatus(`Hosting • ${this.connections.size + 1}/${MAX_PLAYERS} players`);
+        }
+        _broadcast(msg) {
+            for (const c of this.connections.values()) {
+                if (c.open) {
+                    try {
+                        c.send(msg);
+                    } catch (_) {}
+                }
+            }
+        }
+        broadcastIfHost(msg) {
+            if (this.role === 'host') {
+                this._broadcast(msg);
+            }
+        }
+        async joinRoom(hostId, username) {
+            if (!hostId) {
+                ui.setNetStatus('Enter the host ID first');
+                return;
+            }
+            this.disconnect(false);
+            ui.setNetStatus('Loading online multiplayer…');
+            try {
+                const PeerClass = await this._loadPeerJS();
+                this.role = 'client';
+                this.game.mode = 'client';
+                this.peer = new PeerClass();
+                this.peer.on('open',
+                    () => {
+                        this.conn = this.peer.connect(hostId, {
+                            reliable: false,
+                            serialization: 'json'
+                        });
+                        this._setupClientConn(username);
+                    });
+                this.peer.on('error', err => ui.setNetStatus('Peer error: ' + (err.type || err.message)));
+            } catch (err) {
+                this.role = 'local';
+                this.game.mode = 'local';
+                ui.setNetStatus(err.message);
+            }
+        }
+        _setupClientConn(username) {
+            const c = this.conn;
+            c.on('open',
+                () => {
+                    ui.setNetStatus('Connected online…');
+                    ui.showOnlineControls(true);
+                    ui.setNewMatchEnabled(false);
+                    c.send({
+                        type: 'join-info',
+                        username: username
+                    });
+                    c.send({
+                        type: 'request-state'
+                    });
+                });
+            c.on('data', msg => {
+                if (!msg || typeof msg !== 'object') {
+                    return;
+                }
+                if (msg.type === 'welcome') {
+                    this.game.selfId = msg.yourId;
+                    ui.setNetStatus(`Connected online • you are Player ${msg.yourId + 1} • Arrow keys + Space`);
+                } else if (msg.type === 'full') {
+                    ui.setNetStatus('Room is full (10/10 players)');
+                    this.disconnect();
+                } else if (msg.type === 'state') {
+                    this.game.applySnapshot(msg);
+                }
+            });
+            c.on('close',
+                () => {
+                    ui.setNetStatus('Disconnected from host');
+                    this.disconnect();
+                });
+            c.on('error', err => {
+                ui.setNetStatus('Network error: ' + (err.type || err.message));
+            });
+            if (this.inputInterval) {
+                clearInterval(this.inputInterval);
+            }
+            this.inputInterval = setInterval(
+                () => {
+                    if (this.role === 'client' && c.open) {
+                        c.send({
+                            type: 'input',
+                            keys: this.game.getArrowKeys()
+                        });
+                    }
+                }, 30);
+        }
+        requestNewMatch() {
+            if (this.role === 'host') {
+                if (this.game.matchOver) {
+                    this.game.newMatch();
+                }
+            } else if (this.role === 'client') {
+                if (this.conn && this.conn.open) {
+                    this.conn.send({
+                        type: 'new-match-request'
+                    });
+                }
+            } else {
+                this.game.newMatch();
+            }
+        }
+        disconnect(resetToLocal = true) {
+            for (const c of this.connections.values()) {
+                try {
+                    c.close();
+                } catch (_) {}
+            }
+            this.connections.clear();
+            if (this.conn) {
+                try {
+                    this.conn.close();
+                } catch (_) {}
+            }
+            if (this.peer) {
+                try {
+                    this.peer.destroy();
+                } catch (_) {}
+            }
+            if (this.inputInterval) {
+                clearInterval(this.inputInterval);
+                this.inputInterval = null;
+            }
+            this.conn = null;
+            this.peer = null;
+            this.role = 'local';
+            this.nextPlayerId = 1;
+            this.snapshotClock = 0;
+            this.game.remoteInputs.clear();
+            if (resetToLocal) {
+                this.game.setupLocalPlayers();
+                ui.showOnlineControls(false);
+                ui.setNetStatus('Local 2-player');
+            }
+        }
     }
-
-    // ========================= UI WIRING =========================
+    // ============================================================
+    // UI
+    // ============================================================
     const ui = {
-      setNetStatus(text) { document.getElementById('net-status').textContent = text; },
-      showOnlineControls(connected) { document.getElementById('disconnect-btn').style.display = connected ? 'inline-block' : 'none'; },
-      setNewMatchEnabled(enabled) { document.getElementById('new-match-btn').disabled = !enabled; }
+        setNetStatus(text) {
+            document.getElementById('net-status').textContent = text;
+        },
+        showOnlineControls(connected) {
+            document.getElementById('disconnect-btn').style.display = connected ? 'inline-block' : 'none';
+        },
+        setNewMatchEnabled(enabled) {
+            document.getElementById('new-match-btn').disabled = !enabled;
+        }
     };
-
+    // ============================================================
+    // START GAME
+    // ============================================================
     const canvas = document.getElementById('world');
     const game = new Game(canvas);
-
-    document.getElementById('new-match-btn').addEventListener('click', () => game.net.requestNewMatch());
-    document.getElementById('host-btn').addEventListener('click', () => game.net.hostRoom());
-    document.getElementById('join-btn').addEventListener('click', () => {
-      const id = document.getElementById('room-id').value.trim();
-      game.net.joinRoom(id);
+    // New match
+    document.getElementById('new-match-btn').addEventListener('click',
+        () => game.net.requestNewMatch());
+    // Host
+    document.getElementById('host-btn').addEventListener('click',
+        () => game.net.hostRoom());
+    // Join
+    document.getElementById('join-btn').addEventListener('click',
+        () => {
+            const id = document.getElementById('room-id').value.trim();
+            const username = game.sanitizeUsername(document.getElementById('username').value, 1);
+            game.net.joinRoom(id, username);
+        });
+    // Disconnect
+    document.getElementById('disconnect-btn').addEventListener('click',
+        () => game.net.disconnect(true));
+    // Update local username when changed.
+    document.getElementById('username').addEventListener('input', e => {
+        const value = game.sanitizeUsername(e.target.value, 0);
+        if (game.mode === 'local' && game.players.has(0)) {
+            game.players.get(0).username = value;
+            game.updateScoreboardUI();
+        }
     });
-    document.getElementById('disconnect-btn').addEventListener('click', () => game.net.disconnect(true));
-
     game.setStatus('First to 5 • Last one standing or hold the crown 5s!', 3500);
   })();
   </script>
+
 </body>
+
 </html>
