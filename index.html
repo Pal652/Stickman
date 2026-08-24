@@ -159,7 +159,7 @@
       <span>RED: ← → move • ↑ jump • ↓ slam</span>
     </div>
     <div style="margin-top:12px;display:flex;justify-content:center;gap:8px;align-items:center;flex-wrap:wrap">
-      <button onclick="fullReset()">New Match</button>
+      <button id="new-match-btn" onclick="requestNewMatch()">New Match</button>
       <button onclick="hostOnline()">Host Online</button>
       <input id="room-id" placeholder="Host ID" maxlength="40"
         style="padding:10px 12px;border:0;border-radius:10px;background:#1a1a2e;color:#fff;width:150px">
@@ -455,6 +455,9 @@
       keys[e.code] = true;
       if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)) e.preventDefault();
     });
+    window.addEventListener('blur', () => {
+      for (const k in keys) keys[k] = false;
+    });
     window.addEventListener('keyup', e => {
       keys[e.code] = false;
       if (e.code === 'KeyW') cutJump(blue);
@@ -613,8 +616,13 @@
       blueScore = 0;
       redScore = 0;
       matchOver = false;
+      onlineGameStarted = false;
       updateUI();
       resetPositions(false); // new map + new powers
+      if (netRole === 'local') {
+        onlineMatchActive = false;
+        setNewMatchEnabled(false);
+      }
       setStatus('New match! First to 5 • Random maps & powers!', 2500);
     }
 
@@ -640,6 +648,7 @@
         setStatus('🔴 RED scores a knockout!');
         if (redScore >= 5) {
           matchOver = true;
+          endOnlineMatch();
           setStatus('🔴 RED WINS THE MATCH!', 0);
         } else {
           setTimeout(resetPositions, 900);
@@ -651,6 +660,7 @@
         setStatus('🔵 BLUE scores a knockout!');
         if (blueScore >= 5) {
           matchOver = true;
+          endOnlineMatch();
           setStatus('🔵 BLUE WINS THE MATCH!', 0);
         } else {
           setTimeout(resetPositions, 900);
@@ -717,6 +727,7 @@
           Body.setVelocity(crown, { x: (Math.random() - 0.5) * 18, y: -14 });
           if (blueScore >= 5) {
             matchOver = true;
+            endOnlineMatch();
             setStatus('🔵 BLUE WINS THE MATCH!', 0);
           }
         }
@@ -731,6 +742,7 @@
           Body.setVelocity(crown, { x: (Math.random() - 0.5) * 18, y: -14 });
           if (redScore >= 5) {
             matchOver = true;
+            endOnlineMatch();
             setStatus('🔴 RED WINS THE MATCH!', 0);
           }
         }
@@ -774,7 +786,7 @@
       }));
       return {
         type: 'state', bodies, blueScore, redScore, matchOver,
-        crownHolder, crownTimer, mapIndex: maps.indexOf(currentMap),
+        onlineGameStarted, crownHolder, crownTimer, mapIndex: maps.indexOf(currentMap),
         powers: {
           bm: blue.moveMult, bj: blue.jumpMult,
           rm: red.moveMult, rj: red.jumpMult
@@ -786,6 +798,10 @@
       blueScore = msg.blueScore;
       redScore = msg.redScore;
       matchOver = msg.matchOver;
+      onlineMatchActive = !!msg.onlineGameStarted;
+      onlineGameStarted = !!msg.onlineGameStarted;
+      if (matchOver) endOnlineMatch();
+      else setNewMatchEnabled(false);
       crownHolder = msg.crownHolder;
       crownTimer = msg.crownTimer;
       blue.moveMult = msg.powers.bm; blue.jumpMult = msg.powers.bj;
@@ -811,24 +827,58 @@
         showOnlineControls(true);
         if (netRole === 'host') {
           setNetStatus('Online host • opponent connected');
-          conn.send({ type: 'init', mapIndex: maps.indexOf(currentMap), powers: {
-            bm: blue.moveMult, bj: blue.jumpMult,
-            rm: red.moveMult, rj: red.jumpMult
-          }});
+          onlineMatchActive = true;
+          onlineGameStarted = true;
+          setNewMatchEnabled(false);
+          conn.send({
+            type: 'init',
+            mapIndex: maps.indexOf(currentMap),
+            powers: {
+              bm: blue.moveMult, bj: blue.jumpMult,
+              rm: red.moveMult, rj: red.jumpMult
+            },
+            blueScore, redScore, matchOver,
+            onlineGameStarted
+          });
         } else {
           setNetStatus('Connected online • you are RED');
+          onlineMatchActive = true;
+          setNewMatchEnabled(false);
         }
       });
       conn.on('data', msg => {
         if (netRole === 'host' && msg.type === 'input') {
           remoteKeys = msg.keys || {};
+        } else if (netRole === 'host' && msg.type === 'new-match-request') {
+          // Do NOT recreate/destroy PeerJS. Only reset the game state.
+          startOnlineMatchFromHost();
         } else if (netRole === 'client' && msg.type === 'init') {
           loadMap(maps[msg.mapIndex] || maps[0]);
           spawnCrates(currentMap.crates);
           blue.moveMult = msg.powers.bm; blue.jumpMult = msg.powers.bj;
           red.moveMult = msg.powers.rm; red.jumpMult = msg.powers.rj;
+          blueScore = msg.blueScore || 0;
+          redScore = msg.redScore || 0;
+          matchOver = !!msg.matchOver;
+          onlineMatchActive = !!msg.onlineGameStarted;
+          onlineGameStarted = !!msg.onlineGameStarted;
+          updateUI();
           updatePowerUI();
-          setStatus('Online match started!', 1800);
+          if (onlineGameStarted) setNewMatchEnabled(false);
+        } else if (netRole === 'client' && msg.type === 'match-start') {
+          loadMap(maps[msg.mapIndex] || maps[0]);
+          spawnCrates(currentMap.crates);
+          blue.moveMult = msg.powers.bm; blue.jumpMult = msg.powers.bj;
+          red.moveMult = msg.powers.rm; red.jumpMult = msg.powers.rj;
+          blueScore = 0;
+          redScore = 0;
+          matchOver = false;
+          onlineMatchActive = true;
+          onlineGameStarted = true;
+          updateUI();
+          updatePowerUI();
+          setNewMatchEnabled(false);
+          setStatus('New online match!', 1800);
         } else if (netRole === 'client' && msg.type === 'state') {
           applySnapshot(msg);
         }
@@ -843,6 +893,63 @@
 
     // Load PeerJS on demand so the game still works offline/local.
     let peerLoader = null;
+    let onlineMatchActive = false;
+    let onlineGameStarted = false;
+    let pendingNewMatch = false;
+
+    function setNewMatchEnabled(enabled) {
+      const btn = document.getElementById('new-match-btn');
+      if (btn) btn.disabled = !enabled;
+    }
+
+    function syncMatchButton() {
+      // Disabled during every active match, including online matches.
+      setNewMatchEnabled(!onlineMatchActive && !onlineGameStarted && !matchOver);
+    }
+
+    function requestNewMatch() {
+      if (onlineMatchActive && conn && conn.open) {
+        // Either player can request a restart; the host performs it.
+        conn.send({ type: 'new-match-request' });
+        return;
+      }
+      if (onlineMatchActive || onlineGameStarted) return;
+      fullReset();
+    }
+
+    function startOnlineMatchFromHost() {
+      onlineMatchActive = true;
+      onlineGameStarted = true;
+      matchOver = false;
+      setNewMatchEnabled(false);
+      fullReset();
+      if (conn && conn.open) {
+        conn.send({
+          type: 'match-start',
+          mapIndex: maps.indexOf(currentMap),
+          powers: {
+            bm: blue.moveMult, bj: blue.jumpMult,
+            rm: red.moveMult, rj: red.jumpMult
+          }
+        });
+      }
+    }
+
+    function endOnlineMatch() {
+      onlineMatchActive = false;
+      onlineGameStarted = false;
+      setNewMatchEnabled(true);
+    }
+
+    function getOnlineKeys() {
+      // Online mode uses arrows for BOTH players.
+      return {
+        ArrowLeft: !!keys.ArrowLeft,
+        ArrowRight: !!keys.ArrowRight,
+        ArrowUp: !!keys.ArrowUp,
+        ArrowDown: !!keys.ArrowDown
+      };
+    }
     function loadPeerJS() {
       if (window.Peer) return Promise.resolve(window.Peer);
       if (peerLoader) return peerLoader;
@@ -961,6 +1068,9 @@
 
     // Start message
     randomizePowers(); // initial powers for both players
+    onlineMatchActive = false;
+    onlineGameStarted = true;
+    setNewMatchEnabled(false);
     setStatus('First to 5 • Random maps & powers every round!', 3500);
   </script>
 </body>
