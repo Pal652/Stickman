@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Floppy Fighters – Multiplayer Ragdoll</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: #0b0c1a;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      color: #eee;
+      overflow: hidden;
+      user-select: none;
+    }
+    #game-container {
+      position: relative;
+    }
+    canvas {
+      background: linear-gradient(180deg, #1a1a3e 0%, #0f0f23 100%);
+      border-radius: 16px;
+      box-shadow: 0 0 60px rgba(76, 201, 240, 0.15), 0 0 20px rgba(247, 37, 133, 0.1);
+      display: block;
+    }
+    #ui {
+      margin-top: 16px;
+      text-align: center;
+      width: 1000px;
+    }
+    .scores {
+      display: flex;
+      justify-content: center;
+      gap: 60px;
+      margin-bottom: 8px;
+    }
+    .score-box {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+    }
+    #blue-score { color: #4cc9f0; }
+    #red-score  { color: #f72585; }
+    #status {
+      font-size: 18px;
+      height: 28px;
+      color: #ffd60a;
+      font-weight: 600;
+      margin: 6px 0;
+    }
+    .controls {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      color: #888;
+      margin-top: 10px;
+      padding: 0 20px;
+    }
+    .controls span { background: #1a1a2e; padding: 4px 10px; border-radius: 6px; }
+    button {
+      margin-top: 12px;
+      padding: 10px 28px;
+      font-size: 16px;
+      font-weight: 600;
+      border: none;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #4361ee, #3a0ca3);
+      color: white;
+      cursor: pointer;
+      transition: transform 0.1s, box-shadow 0.2s;
+    }
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(67, 97, 238, 0.4);
+    }
+    button:active { transform: translateY(0); }
+    #goal-banner {
+      position: absolute;
+      top: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.65);
+      padding: 6px 18px;
+      border-radius: 20px;
+      font-size: 15px;
+      color: #ffd60a;
+      pointer-events: none;
+      z-index: 10;
+      border: 1px solid rgba(255, 214, 10, 0.3);
+    }
+    #crown-timer {
+      position: absolute;
+      top: 48px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.75);
+      padding: 6px 20px;
+      border-radius: 16px;
+      font-size: 22px;
+      font-weight: 800;
+      color: #ffd60a;
+      pointer-events: none;
+      z-index: 10;
+      border: 2px solid rgba(255, 214, 10, 0.5);
+      min-width: 90px;
+      text-align: center;
+      display: none;
+      letter-spacing: 1px;
+    }
+    #crown-timer.blue { color: #4cc9f0; border-color: rgba(76, 201, 240, 0.6); }
+    #crown-timer.red  { color: #f72585; border-color: rgba(247, 37, 133, 0.6); }
+    .power-display {
+      position: absolute;
+      top: 50px;
+      background: rgba(0,0,0,0.7);
+      padding: 8px 12px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      pointer-events: none;
+      z-index: 10;
+      line-height: 1.45;
+      min-width: 110px;
+    }
+    #blue-power {
+      left: 12px;
+      color: #4cc9f0;
+      border: 1px solid rgba(76, 201, 240, 0.4);
+    }
+    #red-power {
+      right: 12px;
+      color: #f72585;
+      border: 1px solid rgba(247, 37, 133, 0.4);
+      text-align: right;
+    }
+  </style>
+</head>
+<body>
+  <div id="game-container">
+    <div id="goal-banner">🏆 First to 5 wins • Random maps & powers every round • Hold the crown!</div>
+    <div id="crown-timer">5.0</div>
+    <div class="power-display" id="blue-power">MOVE 100%<br>JUMP 100%</div>
+    <div class="power-display" id="red-power">MOVE 100%<br>JUMP 100%</div>
+    <canvas id="world" width="1000" height="600"></canvas>
+  </div>
+  <div id="ui">
+    <div class="scores">
+      <div class="score-box" id="blue-score">BLUE 0</div>
+      <div class="score-box" id="red-score">RED 0</div>
+    </div>
+    <div id="status">Random maps & powers every round!</div>
+    <div class="controls">
+      <span>BLUE: A D move • W jump • S slam</span>
+      <span>RED: ← → move • ↑ jump • ↓ slam</span>
+    </div>
+    <div style="margin-top:12px;display:flex;justify-content:center;gap:8px;align-items:center;flex-wrap:wrap">
+      <button onclick="fullReset()">New Match</button>
+      <button onclick="hostOnline()">Host Online</button>
+      <input id="room-id" placeholder="Host ID" maxlength="40"
+        style="padding:10px 12px;border:0;border-radius:10px;background:#1a1a2e;color:#fff;width:150px">
+      <button onclick="joinOnline()">Join Online</button>
+      <button onclick="disconnectOnline()" id="disconnect-btn" style="display:none">Disconnect</button>
+    </div>
+    <div id="net-status" style="font-size:13px;color:#888;margin-top:8px">Local 2-player</div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+  <script>
+    const { Engine, Render, Runner, Bodies, Composite, Constraint, Body, Events, Vector, Query } = Matter;
+
+    const canvas = document.getElementById('world');
+    const engine = Engine.create();
+    const world = engine.world;
+    engine.gravity.y = 1.25;
+
+    const render = Render.create({
+      canvas: canvas,
+      engine: engine,
+      options: {
+        width: 1000,
+        height: 600,
+        wireframes: false,
+        background: 'transparent',
+        showAngleIndicator: false
+      }
+    });
+
+    // ========== LEVEL ==========
+    const ground = Bodies.rectangle(500, 590, 960, 30, {
+      isStatic: true,
+      render: { fillStyle: '#16213e' },
+      friction: 0.9
+    });
+    // No side walls — players can be knocked off the left/right edges too
+
+    // ========== MAPS ==========
+    let platforms = [];
+    let currentMapName = '';
+
+    const maps = [
+      {
+        name: 'Classic Hills',
+        platforms: [
+          [180, 420, 200, 22, '#0f3460'],
+          [820, 420, 200, 22, '#0f3460'],
+          [500, 300, 160, 22, '#e94560'],
+          [320, 200, 120, 18, '#0f3460'],
+          [680, 200, 120, 18, '#0f3460'],
+        ],
+        crates: [[250, 500], [750, 500], [500, 250], [400, 380], [600, 380]],
+        blueSpawn: [200, 280],
+        redSpawn: [800, 280]
+      },
+      {
+        name: 'The Pit',
+        platforms: [
+          [150, 450, 180, 22, '#0f3460'],
+          [850, 450, 180, 22, '#0f3460'],
+          [500, 380, 220, 22, '#e94560'],
+          [300, 250, 100, 18, '#0f3460'],
+          [700, 250, 100, 18, '#0f3460'],
+          [500, 150, 140, 18, '#0f3460'],
+        ],
+        crates: [[200, 520], [800, 520], [450, 330], [550, 330], [500, 100]],
+        blueSpawn: [180, 320],
+        redSpawn: [820, 320]
+      },
+      {
+        name: 'Sky Bridges',
+        platforms: [
+          [120, 500, 160, 20, '#0f3460'],
+          [880, 500, 160, 20, '#0f3460'],
+          [300, 380, 140, 18, '#0f3460'],
+          [700, 380, 140, 18, '#0f3460'],
+          [500, 260, 180, 20, '#e94560'],
+          [200, 160, 110, 16, '#0f3460'],
+          [800, 160, 110, 16, '#0f3460'],
+        ],
+        crates: [[150, 460], [850, 460], [500, 220], [350, 340], [650, 340]],
+        blueSpawn: [140, 380],
+        redSpawn: [860, 380]
+      },
+      {
+        name: 'Zigzag',
+        platforms: [
+          [200, 500, 180, 20, '#0f3460'],
+          [800, 500, 180, 20, '#0f3460'],
+          [350, 380, 130, 18, '#0f3460'],
+          [650, 380, 130, 18, '#0f3460'],
+          [500, 280, 120, 18, '#e94560'],
+          [250, 180, 100, 16, '#0f3460'],
+          [750, 180, 100, 16, '#0f3460'],
+        ],
+        crates: [[220, 460], [780, 460], [500, 240], [400, 340], [600, 340]],
+        blueSpawn: [220, 380],
+        redSpawn: [780, 380]
+      },
+      {
+        name: 'Narrow Ledges',
+        platforms: [
+          [100, 480, 120, 18, '#0f3460'],
+          [900, 480, 120, 18, '#0f3460'],
+          [300, 360, 100, 16, '#0f3460'],
+          [700, 360, 100, 16, '#0f3460'],
+          [500, 240, 140, 18, '#e94560'],
+          [200, 150, 90, 14, '#0f3460'],
+          [800, 150, 90, 14, '#0f3460'],
+          [500, 480, 80, 16, '#0f3460'],
+        ],
+        crates: [[120, 440], [880, 440], [500, 200], [320, 320], [680, 320]],
+        blueSpawn: [120, 360],
+        redSpawn: [880, 360]
+      },
+      {
+        name: 'Big Arena',
+        platforms: [
+          [250, 450, 280, 24, '#0f3460'],
+          [750, 450, 280, 24, '#0f3460'],
+          [500, 300, 200, 22, '#e94560'],
+          [150, 200, 140, 18, '#0f3460'],
+          [850, 200, 140, 18, '#0f3460'],
+        ],
+        crates: [[300, 400], [700, 400], [500, 250], [400, 500], [600, 500], [200, 520], [800, 520]],
+        blueSpawn: [250, 320],
+        redSpawn: [750, 320]
+      }
+    ];
+
+    let currentMap = maps[0];
+
+    function loadMap(map) {
+      // Remove old platforms
+      platforms.forEach(p => Composite.remove(world, p));
+      platforms = [];
+
+      map.platforms.forEach(([x, y, w, h, color]) => {
+        const plat = Bodies.rectangle(x, y, w, h, {
+          isStatic: true,
+          render: { fillStyle: color },
+          friction: 0.8
+        });
+        platforms.push(plat);
+        Composite.add(world, plat);
+      });
+
+      currentMap = map;
+      currentMapName = map.name;
+    }
+
+    // Fun props – pushable crates
+    const crates = [];
+    function spawnCrates(positions) {
+      crates.forEach(c => Composite.remove(world, c));
+      crates.length = 0;
+      (positions || currentMap.crates).forEach(([x, y]) => {
+        const crate = Bodies.rectangle(x, y, 36, 36, {
+          density: 0.003,
+          friction: 0.6,
+          restitution: 0.2,
+          render: { fillStyle: '#f4a261' },
+          chamfer: { radius: 4 }
+        });
+        crates.push(crate);
+        Composite.add(world, crate);
+      });
+    }
+
+    Composite.add(world, [ground]);
+    loadMap(maps[0]);
+    spawnCrates();
+
+    // ========== CROWN (the fun goal) ==========
+    let crown = null;
+    let crownHolder = null; // 'blue' | 'red' | null
+    let crownTimer = 0;
+    const CROWN_HOLD_TIME = 5.0; // seconds to get a bonus point
+    const crownTimerEl = document.getElementById('crown-timer');
+
+    function createCrown() {
+      if (crown) Composite.remove(world, crown);
+      crown = Bodies.circle(500, 120, 16, {
+        density: 0.0008,
+        friction: 0.3,
+        restitution: 0.6,
+        render: {
+          fillStyle: '#ffd60a',
+          strokeStyle: '#ff9f1c',
+          lineWidth: 3
+        },
+        label: 'crown'
+      });
+      // Little "points" to make it look crown-ish
+      Composite.add(world, crown);
+      crownHolder = null;
+      crownTimer = 0;
+    }
+    createCrown();
+
+    // ========== RAGDOLL ==========
+    function createRagdoll(x, y, color, label) {
+      const group = Body.nextGroup(true);
+
+      // Start more upright
+      const head = Bodies.circle(x, y - 55, 16, {
+        collisionFilter: { group },
+        render: { fillStyle: color },
+        density: 0.0016,
+        friction: 0.12,
+        restitution: 0.2,
+        label: label + '-head'
+      });
+      const torso = Bodies.rectangle(x, y, 24, 46, {
+        collisionFilter: { group },
+        render: { fillStyle: color },
+        density: 0.0024,
+        friction: 0.35,
+        chamfer: { radius: 6 },
+        label: label + '-torso'
+      });
+      const leftArm = Bodies.rectangle(x - 26, y - 10, 12, 36, {
+        collisionFilter: { group },
+        render: { fillStyle: color },
+        density: 0.0008,
+        friction: 0.12,
+        chamfer: { radius: 4 }
+      });
+      const rightArm = Bodies.rectangle(x + 26, y - 10, 12, 36, {
+        collisionFilter: { group },
+        render: { fillStyle: color },
+        density: 0.0008,
+        friction: 0.12,
+        chamfer: { radius: 4 }
+      });
+      const leftLeg = Bodies.rectangle(x - 10, y + 46, 12, 40, {
+        collisionFilter: { group },
+        render: { fillStyle: color },
+        density: 0.0015,
+        friction: 0.45,
+        chamfer: { radius: 4 }
+      });
+      const rightLeg = Bodies.rectangle(x + 10, y + 46, 12, 40, {
+        collisionFilter: { group },
+        render: { fillStyle: color },
+        density: 0.0015,
+        friction: 0.45,
+        chamfer: { radius: 4 }
+      });
+
+      // Higher stiffness = more controllable, still floppy on impact
+      const constraints = [
+        Constraint.create({ bodyA: head, bodyB: torso, pointA: { x: 0, y: 16 }, pointB: { x: 0, y: -23 }, stiffness: 0.95, damping: 0.15, length: 1 }),
+        Constraint.create({ bodyA: torso, bodyB: leftArm, pointA: { x: -12, y: -15 }, pointB: { x: 0, y: -13 }, stiffness: 0.65, damping: 0.08, length: 3 }),
+        Constraint.create({ bodyA: torso, bodyB: rightArm, pointA: { x: 12, y: -15 }, pointB: { x: 0, y: -13 }, stiffness: 0.65, damping: 0.08, length: 3 }),
+        Constraint.create({ bodyA: torso, bodyB: leftLeg, pointA: { x: -8, y: 23 }, pointB: { x: 0, y: -17 }, stiffness: 0.85, damping: 0.12, length: 2 }),
+        Constraint.create({ bodyA: torso, bodyB: rightLeg, pointA: { x: 8, y: 23 }, pointB: { x: 0, y: -17 }, stiffness: 0.85, damping: 0.12, length: 2 })
+      ];
+
+      const parts = [head, torso, leftArm, rightArm, leftLeg, rightLeg];
+      Composite.add(world, [...parts, ...constraints]);
+
+      // Give a tiny upward nudge so they don't immediately collapse
+      Body.setVelocity(torso, { x: 0, y: -1.5 });
+
+      return {
+        parts,
+        head,
+        torso,
+        leftLeg,
+        rightLeg,
+        leftArm,
+        rightArm,
+        color,
+        label,
+        canJump: true,
+        lastJump: 0,
+        moveMult: 1.0,
+        jumpMult: 1.0,
+        jumpHeld: false,
+        jumpStartedAt: 0
+      };
+    }
+
+    let blue = createRagdoll(currentMap.blueSpawn[0], currentMap.blueSpawn[1], '#4cc9f0', 'blue');
+    let red  = createRagdoll(currentMap.redSpawn[0], currentMap.redSpawn[1], '#f72585', 'red');
+
+    // Will be called properly after functions are defined; placeholder until then
+    // ========== INPUT ==========
+    const keys = {};
+    window.addEventListener('keydown', e => {
+      keys[e.code] = true;
+      if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)) e.preventDefault();
+    });
+    window.addEventListener('keyup', e => {
+      keys[e.code] = false;
+      if (e.code === 'KeyW') cutJump(blue);
+      if (e.code === 'ArrowUp') cutJump(red);
+    });
+
+    function cutJump(player) {
+      if (!player.jumpHeld) return;
+      player.jumpHeld = false;
+      if (Date.now() - player.jumpStartedAt < 180) {
+        for (const part of player.parts) {
+          if (part.velocity.y < -2) {
+            Body.setVelocity(part, {
+              x: part.velocity.x,
+              y: Math.max(part.velocity.y, -6.5)
+            });
+          }
+        }
+      }
+    }
+
+    function isOnGround(player) {
+      // Can jump from platforms, ground, crates, OR the other player
+      const other = (player === blue) ? red : blue;
+      const surfaces = platforms.concat([ground], crates, other.parts);
+
+      const legs = [player.leftLeg, player.rightLeg];
+      for (const leg of legs) {
+        if (Query.collides(leg, surfaces).length > 0) return true;
+      }
+      // also allow torso contact (lying / standing on something)
+      if (Query.collides(player.torso, surfaces).length > 0) return true;
+      return false;
+    }
+
+    // Per-player power multipliers (randomized each round, kept reasonably close)
+    function randomizePowers() {
+      // Move: 0.75 → 1.25  (not too extreme)
+      // Jump: 0.85 → 1.40
+      blue.moveMult = 0.75 + Math.random() * 0.50;
+      blue.jumpMult = 0.85 + Math.random() * 0.55;
+      red.moveMult  = 0.75 + Math.random() * 0.50;
+      red.jumpMult  = 0.85 + Math.random() * 0.55;
+      updatePowerUI();
+    }
+
+    function updatePowerUI() {
+      const bMove = Math.round(blue.moveMult * 100);
+      const bJump = Math.round(blue.jumpMult * 100);
+      const rMove = Math.round(red.moveMult * 100);
+      const rJump = Math.round(red.jumpMult * 100);
+      document.getElementById('blue-power').innerHTML = `MOVE ${bMove}%<br>JUMP ${bJump}%`;
+      document.getElementById('red-power').innerHTML  = `MOVE ${rMove}%<br>JUMP ${rJump}%`;
+    }
+
+    function control(player, leftKey, rightKey, jumpKey, slamKey, keyState = keys) {
+      const baseMove = 0.018;
+      const baseJump = 0.154;
+      const moveForce = baseMove * (player.moveMult || 1);
+      const jumpForce = baseJump * (player.jumpMult || 1);
+      const slamForce = 0.035;
+
+      if (keyState[leftKey]) {
+        Body.applyForce(player.torso, player.torso.position, { x: -moveForce, y: 0 });
+        Body.applyForce(player.head, player.head.position, { x: -moveForce * 0.35, y: 0 });
+        Body.applyForce(player.leftLeg, player.leftLeg.position, { x: -moveForce * 0.25, y: 0 });
+      }
+      if (keyState[rightKey]) {
+        Body.applyForce(player.torso, player.torso.position, { x: moveForce, y: 0 });
+        Body.applyForce(player.head, player.head.position, { x: moveForce * 0.35, y: 0 });
+        Body.applyForce(player.rightLeg, player.rightLeg.position, { x: moveForce * 0.25, y: 0 });
+      }
+
+      const now = Date.now();
+      if (keyState[jumpKey] && !player.jumpHeld && isOnGround(player) && (now - player.lastJump > 320)) {
+        Body.applyForce(player.torso, player.torso.position, { x: 0, y: -jumpForce });
+        Body.applyForce(player.head, player.head.position, { x: 0, y: -jumpForce * 0.45 });
+        Body.applyForce(player.leftLeg, player.leftLeg.position, { x: 0, y: -jumpForce * 0.2 });
+        Body.applyForce(player.rightLeg, player.rightLeg.position, { x: 0, y: -jumpForce * 0.2 });
+        player.lastJump = now;
+        player.jumpHeld = true;
+        player.jumpStartedAt = now;
+      }
+
+      if (!keyState[jumpKey] && player.jumpHeld) cutJump(player);
+      if (player.jumpHeld && now - player.jumpStartedAt > 180) player.jumpHeld = false;
+
+      if (keyState[slamKey]) {
+        Body.applyForce(player.head, player.head.position, { x: 0, y: slamForce });
+        Body.applyForce(player.torso, player.torso.position, { x: 0, y: slamForce * 0.8 });
+      }
+    }
+
+    // ========== SCORING & GAME STATE ==========
+    let blueScore = 0;
+    let redScore = 0;
+    let matchOver = false;
+    let lastFall = 0;
+
+    function updateUI() {
+      document.getElementById('blue-score').textContent = `BLUE ${blueScore}`;
+      document.getElementById('red-score').textContent  = `RED ${redScore}`;
+    }
+
+    function setStatus(msg, duration = 2000) {
+      const el = document.getElementById('status');
+      el.textContent = msg;
+      if (duration) {
+        setTimeout(() => {
+          if (!matchOver) el.textContent = crownHolder ? `${crownHolder.toUpperCase()} has the crown!` : 'Fight!';
+        }, duration);
+      }
+    }
+
+    function resetPositions(keepMapAndPowers = false) {
+      // Save current powers so we can restore them after recreating the bodies
+      const savedBlueMove = blue.moveMult;
+      const savedBlueJump = blue.jumpMult;
+      const savedRedMove  = red.moveMult;
+      const savedRedJump  = red.jumpMult;
+
+      // Remove old ragdolls
+      Composite.remove(world, blue.parts);
+      Composite.remove(world, red.parts);
+
+      if (!keepMapAndPowers) {
+        // Full reset → new random map
+        const map = maps[Math.floor(Math.random() * maps.length)];
+        loadMap(map);
+        spawnCrates(map.crates);
+      }
+
+      const [bx, by] = currentMap.blueSpawn;
+      const [rx, ry] = currentMap.redSpawn;
+      blue = createRagdoll(bx, by, '#4cc9f0', 'blue');
+      red  = createRagdoll(rx, ry, '#f72585', 'red');
+
+      if (keepMapAndPowers) {
+        // Keep the same powers
+        blue.moveMult = savedBlueMove;
+        blue.jumpMult = savedBlueJump;
+        red.moveMult  = savedRedMove;
+        red.jumpMult  = savedRedJump;
+        updatePowerUI();
+      } else {
+        randomizePowers();
+        setStatus(`🗺 ${currentMap.name}`, 2500);
+      }
+
+      createCrown();
+      crownHolder = null;
+      crownTimer = 0; // only the crown timer is always reset
+    }
+
+    function fullReset() {
+      blueScore = 0;
+      redScore = 0;
+      matchOver = false;
+      updateUI();
+      resetPositions(false); // new map + new powers
+      setStatus('New match! First to 5 • Random maps & powers!', 2500);
+    }
+
+    function isOutOfBounds(player) {
+      const t = player.torso.position;
+      const h = player.head.position;
+      // Fallen off bottom or flown way off the sides
+      return (
+        t.y > 680 || h.y > 680 ||
+        t.x < -80 || t.x > 1080 ||
+        h.x < -80 || h.x > 1080
+      );
+    }
+
+    function checkFall() {
+      const now = Date.now();
+      if (now - lastFall < 1200) return; // debounce
+
+      if (isOutOfBounds(blue)) {
+        redScore++;
+        lastFall = now;
+        updateUI();
+        setStatus('🔴 RED scores a knockout!');
+        if (redScore >= 5) {
+          matchOver = true;
+          setStatus('🔴 RED WINS THE MATCH!', 0);
+        } else {
+          setTimeout(resetPositions, 900);
+        }
+      } else if (isOutOfBounds(red)) {
+        blueScore++;
+        lastFall = now;
+        updateUI();
+        setStatus('🔵 BLUE scores a knockout!');
+        if (blueScore >= 5) {
+          matchOver = true;
+          setStatus('🔵 BLUE WINS THE MATCH!', 0);
+        } else {
+          setTimeout(resetPositions, 900);
+        }
+      }
+    }
+
+    // Crown / ball logic
+    function updateCrownTimerUI() {
+      if (!crownHolder) {
+        crownTimerEl.style.display = 'none';
+        return;
+      }
+      const remaining = Math.max(0, CROWN_HOLD_TIME - crownTimer);
+      crownTimerEl.style.display = 'block';
+      crownTimerEl.textContent = remaining.toFixed(1);
+      crownTimerEl.className = crownHolder; // applies .blue or .red
+    }
+
+    function updateCrown(dt) {
+      if (!crown || matchOver) {
+        crownTimerEl.style.display = 'none';
+        return;
+      }
+
+      const blueTouch = Query.collides(crown, blue.parts).length > 0;
+      const redTouch  = Query.collides(crown, red.parts).length > 0;
+
+      // Both touching → contested, reset timer
+      if (blueTouch && redTouch) {
+        if (crownHolder) {
+          crownHolder = null;
+          crownTimer = 0;
+          setStatus('⚔️ Contested!');
+        }
+      }
+      // Only blue touches → claim / steal (resets timer)
+      else if (blueTouch && !redTouch) {
+        if (crownHolder !== 'blue') {
+          crownHolder = 'blue';
+          crownTimer = 0;
+          setStatus('🔵 BLUE grabbed the crown!');
+        }
+      }
+      // Only red touches → claim / steal (resets timer)
+      else if (redTouch && !blueTouch) {
+        if (crownHolder !== 'red') {
+          crownHolder = 'red';
+          crownTimer = 0;
+          setStatus('🔴 RED grabbed the crown!');
+        }
+      }
+      // Nobody touching → do NOT stop the timer (keeps running for current holder)
+
+      // Timer keeps running as long as someone holds claim
+      if (crownHolder === 'blue') {
+        crownTimer += dt;
+        if (crownTimer >= CROWN_HOLD_TIME) {
+          blueScore++;
+          updateUI();
+          setStatus('🔵 BLUE held the crown! +1');
+          crownTimer = 0;
+          crownHolder = null;
+          Body.setVelocity(crown, { x: (Math.random() - 0.5) * 18, y: -14 });
+          if (blueScore >= 5) {
+            matchOver = true;
+            setStatus('🔵 BLUE WINS THE MATCH!', 0);
+          }
+        }
+      } else if (crownHolder === 'red') {
+        crownTimer += dt;
+        if (crownTimer >= CROWN_HOLD_TIME) {
+          redScore++;
+          updateUI();
+          setStatus('🔴 RED held the crown! +1');
+          crownTimer = 0;
+          crownHolder = null;
+          Body.setVelocity(crown, { x: (Math.random() - 0.5) * 18, y: -14 });
+          if (redScore >= 5) {
+            matchOver = true;
+            setStatus('🔴 RED WINS THE MATCH!', 0);
+          }
+        }
+      }
+
+      // If the ball leaves the play area → treat as no one holding it
+      if (crown.position.y > 700 || crown.position.x < -100 || crown.position.x > 1100) {
+        Body.setPosition(crown, { x: 500, y: 80 });
+        Body.setVelocity(crown, { x: 0, y: 0 });
+        crownHolder = null;
+        crownTimer = 0;
+      }
+
+      updateCrownTimerUI();
+    }
+
+    // ========== ONLINE MULTIPLAYER ==========
+    // PeerJS provides WebRTC signaling. The host is authoritative for physics.
+    let peer = null;
+    let conn = null;
+    let netRole = 'local'; // local | host | client
+    let remoteKeys = {};
+    let snapshotClock = 0;
+
+    function setNetStatus(text) {
+      document.getElementById('net-status').textContent = text;
+    }
+
+    function showOnlineControls(connected) {
+      document.getElementById('disconnect-btn').style.display = connected ? 'inline-block' : 'none';
+    }
+
+    function makeSnapshot() {
+      const bodies = [...blue.parts, ...red.parts, crown].filter(Boolean).map(b => ({
+        id: b.id, x: b.position.x, y: b.position.y,
+        a: b.angle, vx: b.velocity.x, vy: b.velocity.y, av: b.angularVelocity
+      }));
+      return {
+        type: 'state', bodies, blueScore, redScore, matchOver,
+        crownHolder, crownTimer, mapIndex: maps.indexOf(currentMap),
+        powers: {
+          bm: blue.moveMult, bj: blue.jumpMult,
+          rm: red.moveMult, rj: red.jumpMult
+        }
+      };
+    }
+
+    function applySnapshot(msg) {
+      blueScore = msg.blueScore;
+      redScore = msg.redScore;
+      matchOver = msg.matchOver;
+      crownHolder = msg.crownHolder;
+      crownTimer = msg.crownTimer;
+      blue.moveMult = msg.powers.bm; blue.jumpMult = msg.powers.bj;
+      red.moveMult = msg.powers.rm; red.jumpMult = msg.powers.rj;
+      updateUI();
+      updatePowerUI();
+
+      const all = [...blue.parts, ...red.parts, crown].filter(Boolean);
+      const byId = new Map(all.map(b => [b.id, b]));
+      for (const st of msg.bodies) {
+        const b = byId.get(st.id);
+        if (!b) continue;
+        Body.setPosition(b, { x: st.x, y: st.y });
+        Body.setAngle(b, st.a);
+        Body.setVelocity(b, { x: st.vx, y: st.vy });
+        Body.setAngularVelocity(b, st.av);
+      }
+    }
+
+    function setupConnection(c) {
+      conn = c;
+      conn.on('open', () => {
+        showOnlineControls(true);
+        if (netRole === 'host') {
+          setNetStatus('Online host • opponent connected');
+          conn.send({ type: 'init', mapIndex: maps.indexOf(currentMap), powers: {
+            bm: blue.moveMult, bj: blue.jumpMult,
+            rm: red.moveMult, rj: red.jumpMult
+          }});
+        } else {
+          setNetStatus('Connected online • you are RED');
+        }
+      });
+      conn.on('data', msg => {
+        if (netRole === 'host' && msg.type === 'input') {
+          remoteKeys = msg.keys || {};
+        } else if (netRole === 'client' && msg.type === 'init') {
+          loadMap(maps[msg.mapIndex] || maps[0]);
+          spawnCrates(currentMap.crates);
+          blue.moveMult = msg.powers.bm; blue.jumpMult = msg.powers.bj;
+          red.moveMult = msg.powers.rm; red.jumpMult = msg.powers.rj;
+          updatePowerUI();
+          setStatus('Online match started!', 1800);
+        } else if (netRole === 'client' && msg.type === 'state') {
+          applySnapshot(msg);
+        }
+      });
+      conn.on('close', () => {
+        setNetStatus('Opponent disconnected • local mode');
+        showOnlineControls(false);
+        conn = null; netRole = 'local'; remoteKeys = {};
+      });
+      conn.on('error', err => setNetStatus('Network error: ' + err.type));
+    }
+
+    function hostOnline() {
+      disconnectOnline();
+      netRole = 'host';
+      peer = new Peer();
+      peer.on('open', id => {
+        document.getElementById('room-id').value = id;
+        setNetStatus('Hosting • share this Host ID with your opponent');
+      });
+      peer.on('connection', c => {
+        setupConnection(c);
+        setStatus('Opponent connected!', 1800);
+      });
+      peer.on('error', err => setNetStatus('Peer error: ' + err.type));
+    }
+
+    function joinOnline() {
+      const id = document.getElementById('room-id').value.trim();
+      if (!id) return setNetStatus('Enter the host ID first');
+      disconnectOnline();
+      netRole = 'client';
+      peer = new Peer();
+      peer.on('open', () => setupConnection(peer.connect(id, { reliable: true })));
+      peer.on('error', err => setNetStatus('Peer error: ' + err.type));
+    }
+
+    function disconnectOnline() {
+      if (conn) { try { conn.close(); } catch (_) {} }
+      if (peer) { try { peer.destroy(); } catch (_) {} }
+      conn = null; peer = null; netRole = 'local'; remoteKeys = {};
+      showOnlineControls(false);
+      setNetStatus('Local 2-player');
+    }
+
+    setInterval(() => {
+      if (netRole === 'client' && conn && conn.open) {
+        const relevant = ['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'];
+        const out = {};
+        relevant.forEach(k => out[k] = !!keys[k]);
+        conn.send({ type: 'input', keys: out });
+      }
+    }, 33);
+
+    // ========== MAIN LOOP ==========
+    let lastTime = performance.now();
+    Events.on(engine, 'beforeUpdate', () => {
+      if (matchOver) return;
+
+      const now = performance.now();
+      const dt = (now - lastTime) / 1000;
+      lastTime = now;
+
+      if (netRole !== 'client') {
+        control(blue, 'KeyA', 'KeyD', 'KeyW', 'KeyS');
+        control(red, 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown',
+          netRole === 'host' ? remoteKeys : keys);
+
+        checkFall();
+        updateCrown(dt);
+
+        snapshotClock += dt;
+        if (netRole === 'host' && conn && conn.open && snapshotClock >= 0.05) {
+          snapshotClock = 0;
+          conn.send(makeSnapshot());
+        }
+      }
+    });
+
+    // Visual polish – make crown glow a bit by changing color when held
+    Events.on(render, 'afterRender', () => {
+      if (!crown) return;
+      const ctx = render.context;
+      if (crownHolder === 'blue') {
+        ctx.beginPath();
+        ctx.arc(crown.position.x, crown.position.y, 22, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(76, 201, 240, 0.25)';
+        ctx.fill();
+      } else if (crownHolder === 'red') {
+        ctx.beginPath();
+        ctx.arc(crown.position.x, crown.position.y, 22, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(247, 37, 133, 0.25)';
+        ctx.fill();
+      }
+    });
+
+    Render.run(render);
+    Runner.run(Runner.create(), engine);
+
+    // Start message
+    randomizePowers(); // initial powers for both players
+    setStatus('First to 5 • Random maps & powers every round!', 3500);
+  </script>
+</body>
+</html>
