@@ -278,7 +278,8 @@
 
     <div class="controls">
       <span>LOCAL P1: A D move • W jump • S slam</span>
-      <span>LOCAL P2 / ONLINE: ← → move • ↑ jump • ↓ slam • Space laser</span>
+      <span>LOCAL P2 / ONLINE: ← → move • ↑ jump • ↓ slam • Space laser (online only)</span>
+      <span>Hold jump for height • Teal platforms are jump-through • Dodge the spinners</span>
     </div>
 
     <div class="toolbar">
@@ -303,14 +304,19 @@
         Disconnect
       </button>
 
+      <button id="sound-btn">
+        🔊 Sound On
+      </button>
+
     </div>
 
     <div id="power-legend">
-      <span class="power-legend-item">💥 Knockback = stronger pushes</span>
-      <span class="power-legend-item">🌀 Repulse = pushes enemies</span>
-      <span class="power-legend-item">🔥 Laser = Space, one-shot</span>
+      <span class="power-legend-item">Powers stack — collect them all!</span>
+      <span class="power-legend-item">💥 Knockback = heavier, up to Lv.9</span>
+      <span class="power-legend-item">🌀 Repulse = pushes enemies, up to Lv.9</span>
+      <span class="power-legend-item">🔥 Laser = Space, one-shot (online)</span>
       <span class="power-legend-item">🧱 Ghost = fall protection</span>
-      <span class="power-legend-item">⚓ Anchor = cannot be pushed</span>
+      <span class="power-legend-item">⚓ Anchor = cannot be pushed (rare!)</span>
       <span class="power-legend-item">🔄 Invert = reverses others</span>
     </div>
 
@@ -339,14 +345,24 @@
     // ============================================================
     // CONSTANTS
     // ============================================================
-    const WORLD_W = 1000;
-    const WORLD_H = 600;
+    const VIEW_W = 1000;
+    const VIEW_H = 600;
+    // Map data below is authored on a 1000x600 grid, then stretched into the real world.
+    const MAP_SX = 1.45;
+    const MAP_SW = 1.7;
+    const MAP_OY = 90;
+    const WORLD_W = 1450;
+    const WORLD_H = 700;
+    const GROUND_Y = 680;
+    const CAT_ONEWAY = 0x0002;
+    const ONEWAY_COLOR = '#2ec4b6';
+    const SPINNER_COLOR = '#ff9f1c';
+    const JUMP_HOLD_MS = 240;
     const MAX_PLAYERS = 10;
     const SCORE_TO_WIN = 5;
     const CROWN_HOLD_TIME = 5.0;
     const FALL_DEBOUNCE = 1200;
     const POWERUP_INTERVAL = 10;
-    const MAX_POWER_LEVEL = 9;
     const PLAYER_COLORS = ['#4cc9f0', '#f72585', '#ffd60a', '#06d6a0', '#f4a261', '#9d4edd', '#ef476f', '#118ab2', '#c1121f', '#7209b7'];
     const KEYMAP_WASD = {
         left: 'KeyA',
@@ -400,6 +416,27 @@
             name: 'Invert'
         }
     };
+    // Only the pushing powers stack into high levels; the rest are on/off.
+    const POWER_MAX_LEVEL = {
+        knockback: 9,
+        repulse: 9,
+        laser: 1,
+        ghost: 1,
+        invert: 1,
+        anchor: 1
+    };
+    const POWER_DURATION = {
+        ghost: 20,
+        invert: 5
+    };
+    const ANCHOR_CHANCE = 0.05;
+    const POWER_WEIGHTS = {
+        knockback: 1.3,
+        repulse: 1.3,
+        laser: 1.0,
+        ghost: 1.0,
+        invert: 0.85
+    };
     // ============================================================
     // MAPS
     // ============================================================
@@ -409,8 +446,11 @@
             [180, 420, 200, 22, '#0f3460'],
             [820, 420, 200, 22, '#0f3460'],
             [500, 300, 160, 22, '#e94560'],
-            [320, 200, 120, 18, '#0f3460'],
-            [680, 200, 120, 18, '#0f3460']
+            [320, 200, 120, 18, ONEWAY_COLOR, true],
+            [680, 200, 120, 18, ONEWAY_COLOR, true]
+        ],
+        spinners: [
+            [500, 455, 190, 16, 1.1]
         ],
         crates: [
             [250, 500],
@@ -427,9 +467,13 @@
             [150, 450, 180, 22, '#0f3460'],
             [850, 450, 180, 22, '#0f3460'],
             [500, 380, 220, 22, '#e94560'],
-            [300, 250, 100, 18, '#0f3460'],
-            [700, 250, 100, 18, '#0f3460'],
-            [500, 150, 140, 18, '#0f3460']
+            [300, 250, 100, 18, ONEWAY_COLOR, true],
+            [700, 250, 100, 18, ONEWAY_COLOR, true],
+            [500, 150, 140, 18, ONEWAY_COLOR, true]
+        ],
+        spinners: [
+            [350, 455, 170, 14, -1.4],
+            [650, 455, 170, 14, 1.4]
         ],
         crates: [
             [200, 520],
@@ -445,11 +489,14 @@
         platforms: [
             [120, 500, 160, 20, '#0f3460'],
             [880, 500, 160, 20, '#0f3460'],
-            [300, 380, 140, 18, '#0f3460'],
-            [700, 380, 140, 18, '#0f3460'],
+            [300, 380, 140, 18, ONEWAY_COLOR, true],
+            [700, 380, 140, 18, ONEWAY_COLOR, true],
             [500, 260, 180, 20, '#e94560'],
-            [200, 160, 110, 16, '#0f3460'],
-            [800, 160, 110, 16, '#0f3460']
+            [200, 160, 110, 16, ONEWAY_COLOR, true],
+            [800, 160, 110, 16, ONEWAY_COLOR, true]
+        ],
+        spinners: [
+            [500, 440, 200, 16, 1.2]
         ],
         crates: [
             [150, 460],
@@ -465,11 +512,14 @@
         platforms: [
             [200, 500, 180, 20, '#0f3460'],
             [800, 500, 180, 20, '#0f3460'],
-            [350, 380, 130, 18, '#0f3460'],
-            [650, 380, 130, 18, '#0f3460'],
+            [350, 380, 130, 18, ONEWAY_COLOR, true],
+            [650, 380, 130, 18, ONEWAY_COLOR, true],
             [500, 280, 120, 18, '#e94560'],
-            [250, 180, 100, 16, '#0f3460'],
-            [750, 180, 100, 16, '#0f3460']
+            [250, 180, 100, 16, ONEWAY_COLOR, true],
+            [750, 180, 100, 16, ONEWAY_COLOR, true]
+        ],
+        spinners: [
+            [500, 455, 180, 16, -1.3]
         ],
         crates: [
             [220, 460],
@@ -485,12 +535,15 @@
         platforms: [
             [100, 480, 120, 18, '#0f3460'],
             [900, 480, 120, 18, '#0f3460'],
-            [300, 360, 100, 16, '#0f3460'],
-            [700, 360, 100, 16, '#0f3460'],
+            [300, 360, 100, 16, ONEWAY_COLOR, true],
+            [700, 360, 100, 16, ONEWAY_COLOR, true],
             [500, 240, 140, 18, '#e94560'],
-            [200, 150, 90, 14, '#0f3460'],
-            [800, 150, 90, 14, '#0f3460'],
+            [200, 150, 90, 14, ONEWAY_COLOR, true],
+            [800, 150, 90, 14, ONEWAY_COLOR, true],
             [500, 480, 80, 16, '#0f3460']
+        ],
+        spinners: [
+            [500, 340, 170, 14, 1.5]
         ],
         crates: [
             [120, 440],
@@ -507,8 +560,12 @@
             [250, 450, 280, 24, '#0f3460'],
             [750, 450, 280, 24, '#0f3460'],
             [500, 300, 200, 22, '#e94560'],
-            [150, 200, 140, 18, '#0f3460'],
-            [850, 200, 140, 18, '#0f3460']
+            [150, 200, 140, 18, ONEWAY_COLOR, true],
+            [850, 200, 140, 18, ONEWAY_COLOR, true]
+        ],
+        spinners: [
+            [500, 470, 200, 18, 0.9],
+            [500, 150, 150, 14, -1.9]
         ],
         crates: [
             [300, 400],
@@ -522,6 +579,13 @@
         blueSpawn: [250, 320],
         redSpawn: [750, 320]
     }];
+    for (const map of MAPS) {
+        map.platforms = map.platforms.map(([x, y, w, h, color, oneWay]) => [x * MAP_SX, y + MAP_OY, w * MAP_SW, h, color, !!oneWay]);
+        map.spinners = (map.spinners || []).map(([x, y, len, thick, speed]) => [x * MAP_SX, y + MAP_OY, len, thick, speed]);
+        map.crates = map.crates.map(([x, y]) => [x * MAP_SX, y + MAP_OY]);
+        map.blueSpawn = [map.blueSpawn[0] * MAP_SX, map.blueSpawn[1] + MAP_OY];
+        map.redSpawn = [map.redSpawn[0] * MAP_SX, map.redSpawn[1] + MAP_OY];
+    }
     // ============================================================
     // RAGDOLL PLAYER
     // ============================================================
@@ -547,9 +611,7 @@
             this.leftLeg = null;
             this.rightLeg = null;
             // Powerup state
-            this.powerType = null;
-            this.powerLevel = 0;
-            this.powerTimer = 0;
+            this.powers = new Map();
             this.laserReady = false;
             this.lastLaser = 0;
             this.spawnBody(x, y);
@@ -563,7 +625,7 @@
                 this[name] = body;
                 return body;
             };
-            const head = mk('head', Bodies.circle(x, y - 55, 16, {
+            const head = mk('head', Bodies.circle(x, y - 46, 20, {
                 collisionFilter: {
                     group
                 },
@@ -574,7 +636,7 @@
                 friction: 0.12,
                 restitution: 0.2
             }));
-            const torso = mk('torso', Bodies.rectangle(x, y, 24, 46, {
+            const torso = mk('torso', Bodies.rectangle(x, y, 36, 48, {
                 collisionFilter: {
                     group
                 },
@@ -584,10 +646,10 @@
                 density: 0.0024,
                 friction: 0.35,
                 chamfer: {
-                    radius: 6
+                    radius: 8
                 }
             }));
-            const leftArm = mk('leftArm', Bodies.rectangle(x - 26, y - 10, 12, 36, {
+            const leftArm = mk('leftArm', Bodies.rectangle(x - 28, y - 10, 16, 38, {
                 collisionFilter: {
                     group
                 },
@@ -597,10 +659,10 @@
                 density: 0.0008,
                 friction: 0.12,
                 chamfer: {
-                    radius: 4
+                    radius: 5
                 }
             }));
-            const rightArm = mk('rightArm', Bodies.rectangle(x + 26, y - 10, 12, 36, {
+            const rightArm = mk('rightArm', Bodies.rectangle(x + 28, y - 10, 16, 38, {
                 collisionFilter: {
                     group
                 },
@@ -610,10 +672,10 @@
                 density: 0.0008,
                 friction: 0.12,
                 chamfer: {
-                    radius: 4
+                    radius: 5
                 }
             }));
-            const leftLeg = mk('leftLeg', Bodies.rectangle(x - 10, y + 46, 12, 40, {
+            const leftLeg = mk('leftLeg', Bodies.rectangle(x - 11, y + 46, 16, 42, {
                 collisionFilter: {
                     group
                 },
@@ -623,10 +685,10 @@
                 density: 0.0015,
                 friction: 0.45,
                 chamfer: {
-                    radius: 4
+                    radius: 5
                 }
             }));
-            const rightLeg = mk('rightLeg', Bodies.rectangle(x + 10, y + 46, 12, 40, {
+            const rightLeg = mk('rightLeg', Bodies.rectangle(x + 11, y + 46, 16, 42, {
                 collisionFilter: {
                     group
                 },
@@ -645,11 +707,11 @@
                     bodyB: torso,
                     pointA: {
                         x: 0,
-                        y: 16
+                        y: 20
                     },
                     pointB: {
                         x: 0,
-                        y: -23
+                        y: -24
                     },
                     stiffness: 0.95,
                     damping: 0.15,
@@ -659,12 +721,12 @@
                     bodyA: torso,
                     bodyB: leftArm,
                     pointA: {
-                        x: -12,
-                        y: -15
+                        x: -17,
+                        y: -16
                     },
                     pointB: {
                         x: 0,
-                        y: -13
+                        y: -14
                     },
                     stiffness: 0.65,
                     damping: 0.08,
@@ -674,12 +736,12 @@
                     bodyA: torso,
                     bodyB: rightArm,
                     pointA: {
-                        x: 12,
-                        y: -15
+                        x: 17,
+                        y: -16
                     },
                     pointB: {
                         x: 0,
-                        y: -13
+                        y: -14
                     },
                     stiffness: 0.65,
                     damping: 0.08,
@@ -689,14 +751,14 @@
                     bodyA: torso,
                     bodyB: leftLeg,
                     pointA: {
-                        x: -8,
-                        y: 23
+                        x: -9,
+                        y: 24
                     },
                     pointB: {
                         x: 0,
-                        y: -17
+                        y: -18
                     },
-                    stiffness: 0.85,
+                    stiffness: 0.75,
                     damping: 0.12,
                     length: 2
                 }),
@@ -704,14 +766,14 @@
                     bodyA: torso,
                     bodyB: rightLeg,
                     pointA: {
-                        x: 8,
-                        y: 23
+                        x: 9,
+                        y: 24
                     },
                     pointB: {
                         x: 0,
-                        y: -17
+                        y: -18
                     },
-                    stiffness: 0.85,
+                    stiffness: 0.75,
                     damping: 0.12,
                     length: 2
                 })
@@ -724,6 +786,7 @@
                 leftLeg,
                 rightLeg
             ];
+            this.baseMasses = new Map(this.parts.map(b => [b, b.mass]));
             this.springs = this._buildAntiPenetrationSprings();
             Composite.add(world,
                 [...this.parts, ...this.joints, ...this.springs]);
@@ -789,14 +852,12 @@
                 return false;
             }
             const surfaces = this.game.getSurfacesFor(this);
-            if (Query.collides(this.leftLeg, surfaces).length > 0) {
-                return true;
-            }
-            if (Query.collides(this.rightLeg, surfaces).length > 0) {
-                return true;
-            }
-            if (Query.collides(this.torso, surfaces).length > 0) {
-                return true;
+            const solidOnly = surfaces.filter(s => !s.isOneWay);
+            for (const part of [this.leftLeg, this.rightLeg, this.torso]) {
+                const usable = (part.collisionFilter.mask & CAT_ONEWAY) ? surfaces : solidOnly;
+                if (Query.collides(part, usable).length > 0) {
+                    return true;
+                }
             }
             return false;
         }
@@ -806,17 +867,21 @@
             }
             const t = this.torso.position;
             const h = this.head.position;
-            return (t.y > 680 || h.y > 680 || t.x < -80 || t.x > WORLD_W + 80 || h.x < -80 || h.x > WORLD_W + 80);
+            return (t.y > WORLD_H + 90 || h.y > WORLD_H + 90 || t.x < -80 || t.x > WORLD_W + 80 || h.x < -80 || h.x > WORLD_W + 80);
         }
         applyControl(keyState, keymap) {
             if (!this.alive) {
                 return;
             }
-            const baseMove = 0.012;
-            const baseJump = 0.124;
-            const slamForce = 0.025;
-            const moveForce = baseMove * (this.moveMult || 1);
-            const jumpForce = baseJump * (this.jumpMult || 1);
+            const baseMove = 0.015;
+            const baseJump = 0.165;
+            const baseJumpHold = 0.0072;
+            // Scale control forces with mass so extra weight never changes handling.
+            const weight = this.massScale();
+            const slamForce = 0.025 * weight;
+            const moveForce = baseMove * (this.moveMult || 1) * weight;
+            const jumpForce = baseJump * (this.jumpMult || 1) * weight;
+            const jumpHoldForce = baseJumpHold * (this.jumpMult || 1) * weight;
             // --------------------------------------------------------
             // Movement
             // --------------------------------------------------------
@@ -849,35 +914,22 @@
                 });
             }
             // --------------------------------------------------------
-            // Jump
+            // Jump: tap = short hop, hold = full height
             // --------------------------------------------------------
             const now = Date.now();
-            if (keyState[keymap.jump] && !this.jumpHeld && this.isOnGround() && now - this.lastJump > 320) {
-                Body.applyForce(this.torso, this.torso.position, {
-                    x: 0,
-                    y: -jumpForce
-                });
-                Body.applyForce(this.head, this.head.position, {
-                    x: 0,
-                    y: -jumpForce * 0.85
-                });
-                Body.applyForce(this.leftLeg, this.leftLeg.position, {
-                    x: 0,
-                    y: -jumpForce * 0.2
-                });
-                Body.applyForce(this.rightLeg, this.rightLeg.position, {
-                    x: 0,
-                    y: -jumpForce * 0.2
-                });
+            const jumpDown = !!keyState[keymap.jump];
+            if (jumpDown && !this.jumpHeld && this.isOnGround() && now - this.lastJump > 260) {
+                this._applyJumpForce(jumpForce);
                 this.lastJump = now;
                 this.jumpHeld = true;
                 this.jumpStartedAt = now;
-            }
-            if (!keyState[keymap.jump] && this.jumpHeld) {
-                this._cutJump();
-            }
-            if (this.jumpHeld && now - this.jumpStartedAt > 180) {
-                this.jumpHeld = false;
+                this.game.playSfx('jump');
+            } else if (this.jumpHeld) {
+                if (!jumpDown || now - this.jumpStartedAt > JUMP_HOLD_MS || this.torso.velocity.y > 0) {
+                    this.jumpHeld = false;
+                } else {
+                    this._applyJumpForce(jumpHoldForce);
+                }
             }
             // --------------------------------------------------------
             // Slam
@@ -893,70 +945,112 @@
                 });
             }
         }
-        _cutJump() {
-            if (!this.jumpHeld) {
-                return;
-            }
-            this.jumpHeld = false;
-            if (Date.now() - this.jumpStartedAt < 180) {
-                for (const part of this.parts) {
-                    if (part.velocity.y < -2) {
-                        Body.setVelocity(part, {
-                            x: part.velocity.x,
-                            y: Math.max(part.velocity.y, -6.5)
-                        });
-                    }
-                }
-            }
+        _applyJumpForce(f) {
+            Body.applyForce(this.torso, this.torso.position, {
+                x: 0,
+                y: -f
+            });
+            Body.applyForce(this.head, this.head.position, {
+                x: 0,
+                y: -f * 0.85
+            });
+            Body.applyForce(this.leftLeg, this.leftLeg.position, {
+                x: 0,
+                y: -f * 0.2
+            });
+            Body.applyForce(this.rightLeg, this.rightLeg.position, {
+                x: 0,
+                y: -f * 0.2
+            });
         }
         // ==========================================================
         // POWERUPS
         // ==========================================================
         givePower(type) {
-            if (this.powerType === type) {
-                this.powerLevel = Math.min(MAX_POWER_LEVEL, this.powerLevel + 1);
-            } else {
-                this.powerType = type;
-                this.powerLevel = 1;
-            }
+            const max = POWER_MAX_LEVEL[type] || 1;
+            const current = this.powers.get(type);
+            const level = Math.min(max, (current ? current.level : 0) + 1);
+            this.powers.set(type, {
+                level,
+                timer: POWER_DURATION[type] || 0
+            });
             if (type === POWER_TYPES.LASER) {
                 this.laserReady = true;
-                this.powerTimer = 0;
-            }
-            if (type === POWER_TYPES.GHOST) {
-                this.powerTimer = 20;
-            }
-            if (type === POWER_TYPES.INVERT) {
-                this.powerTimer = 5;
-            }
-            if (type === POWER_TYPES.ANCHOR) {
-                this.powerTimer = 0;
             }
             this.updateVisuals();
-            this.game.setStatus(`${this.game.displayName(this.id)} got ` + `${POWERUP_INFO[type].name}` + (this.powerLevel > 1 ? ` Lv.${this.powerLevel}` : ''), 1800);
+            this.game.setStatus(`${this.game.displayName(this.id)} got ` + `${POWERUP_INFO[type].name}` + (level > 1 ? ` Lv.${level}` : ''), 1800);
+        }
+        removePower(type) {
+            this.powers.delete(type);
+            if (type === POWER_TYPES.LASER) {
+                this.laserReady = false;
+            }
+            this.updateVisuals();
         }
         clearPower() {
-            this.powerType = null;
-            this.powerLevel = 0;
-            this.powerTimer = 0;
+            this.powers.clear();
             this.laserReady = false;
             this.updateVisuals();
         }
         hasPower(type) {
-            return (this.powerType === type && this.powerLevel > 0);
+            const state = this.powers.get(type);
+            return !!state && state.level > 0;
         }
-        powerMultiplier() {
-            return (1 + Math.max(0, this.powerLevel - 1) * 0.45);
+        powerLevelOf(type) {
+            const state = this.powers.get(type);
+            return state ? state.level : 0;
+        }
+        powerTimerOf(type) {
+            const state = this.powers.get(type);
+            return state ? state.timer : 0;
+        }
+        powerMultiplier(type) {
+            return (1 + Math.max(0, this.powerLevelOf(type) - 1) * 0.45);
+        }
+        // Knockback makes the ragdoll physically heavier so it shoves others around.
+        massScale() {
+            const level = this.powerLevelOf(POWER_TYPES.KNOCKBACK);
+            if (!level) {
+                return 1;
+            }
+            return 2.5 + (level - 1) * 0.9;
+        }
+        applyMassScale() {
+            if (!this.baseMasses || !this.parts.length) {
+                return;
+            }
+            const scale = this.massScale();
+            for (const part of this.parts) {
+                const base = this.baseMasses.get(part);
+                if (!base) {
+                    continue;
+                }
+                const target = base * scale;
+                if (Math.abs(part.mass - target) > 1e-9) {
+                    Body.setMass(part, target);
+                }
+            }
         }
         serializePower() {
-            return {
-                type: this.powerType,
-                level: this.powerLevel,
-                timer: this.powerTimer,
-                laserReady: this.laserReady
-            };
+            return [...this.powers.entries()].map(([type, state]) => ({
+                type,
+                level: state.level,
+                timer: state.timer
+            }));
+        }
+        applyPowerState(list, laserReady) {
+            this.powers = new Map((list || []).map(e => [
+                e.type,
+                {
+                    level: Number(e.level) || 0,
+                    timer: Number(e.timer) || 0
+                }
+            ]));
+            this.laserReady = !!laserReady;
+            this.updateVisuals();
         }
         updateVisuals() {
+            this.applyMassScale();
             const glowing = this.hasPower(POWER_TYPES.KNOCKBACK);
             for (const part of this.parts) {
                 part.render.fillStyle = this.color;
@@ -1009,7 +1103,7 @@
             if (this.body) {
                 Composite.remove(this.world, this.body);
             }
-            this.body = Bodies.circle(WORLD_W / 2, 120, 16, {
+            this.body = Bodies.circle(WORLD_W / 2, 210, 16, {
                 density: 0.0008,
                 friction: 0.3,
                 restitution: 0.6,
@@ -1040,19 +1134,26 @@
                 canvas,
                 engine: this.engine,
                 options: {
-                    width: WORLD_W,
-                    height: WORLD_H,
+                    width: VIEW_W,
+                    height: VIEW_H,
                     wireframes: false,
                     background: 'transparent',
-                    showAngleIndicator: false
+                    showAngleIndicator: false,
+                    hasBounds: true
                 }
             });
-            this.ground = Bodies.rectangle(WORLD_W / 2, 590, 960, 30, {
+            this.camera = {
+                x: WORLD_W / 2,
+                y: WORLD_H - VIEW_H / 2,
+                w: VIEW_W,
+                h: VIEW_H
+            };
+            this.ground = Bodies.rectangle(WORLD_W / 2, GROUND_Y, WORLD_W - 60, 30, {
                 isStatic: true,
                 render: {
                     fillStyle: '#16213e'
                 },
-                friction: 0.9
+                friction: 0.5
             });
             Composite.add(this.world,
                 [
@@ -1060,6 +1161,7 @@
                 ]);
             this.platforms = [];
             this.crates = [];
+            this.spinners = [];
             this.powerups = [];
             this.currentMap = null;
             this.players = new Map();
@@ -1073,11 +1175,85 @@
             this.keys = {};
             this.powerupClock = 0;
             this.laserEffects = [];
+            this._laserSeq = 0;
+            this._lastSeenLaserId = 0;
+            this.sfxQueue = [];
             this.crown = new Crown(this.world);
             this.net = new NetworkManager(this);
             this._bindInput();
             this.setupLocalPlayers();
             this._bindLoop();
+        }
+        // ==========================================================
+        // CAMERA
+        // ==========================================================
+        updateCamera() {
+            const aspect = VIEW_W / VIEW_H;
+            let viewW = VIEW_W;
+            let cx = this.camera.x;
+            let cy = this.camera.y;
+            const tracked = [];
+            if (this.mode === 'local') {
+                for (const p of this.players.values()) {
+                    if (p.alive && p.torso) {
+                        tracked.push(p.torso.position);
+                    }
+                }
+            } else {
+                const me = this.players.get(this.selfId);
+                if (me && me.alive && me.torso) {
+                    tracked.push(me.torso.position);
+                }
+            }
+            if (tracked.length) {
+                let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+                for (const pos of tracked) {
+                    minX = Math.min(minX, pos.x);
+                    maxX = Math.max(maxX, pos.x);
+                    minY = Math.min(minY, pos.y);
+                    maxY = Math.max(maxY, pos.y);
+                }
+                cx = (minX + maxX) / 2;
+                cy = (minY + maxY) / 2;
+                const padX = 300;
+                const padY = 210;
+                viewW = Math.max(VIEW_W, maxX - minX + padX * 2, (maxY - minY + padY * 2) * aspect);
+            }
+            viewW = Math.min(viewW, WORLD_W + 120);
+            const viewH = viewW / aspect;
+            const bounds = {
+                minX: -60,
+                maxX: WORLD_W + 60,
+                minY: -180,
+                maxY: WORLD_H + 60
+            };
+            const spanX = bounds.maxX - bounds.minX;
+            const spanY = bounds.maxY - bounds.minY;
+            cx = viewW >= spanX ? (bounds.minX + bounds.maxX) / 2 : Math.max(bounds.minX + viewW / 2, Math.min(bounds.maxX - viewW / 2, cx));
+            cy = viewH >= spanY ? (bounds.minY + bounds.maxY) / 2 : Math.max(bounds.minY + viewH / 2, Math.min(bounds.maxY - viewH / 2, cy));
+            const ease = 0.12;
+            this.camera.w += (viewW - this.camera.w) * ease;
+            this.camera.h = this.camera.w / aspect;
+            this.camera.x += (cx - this.camera.x) * ease;
+            this.camera.y += (cy - this.camera.y) * ease;
+            this.render.bounds.min.x = this.camera.x - this.camera.w / 2;
+            this.render.bounds.max.x = this.camera.x + this.camera.w / 2;
+            this.render.bounds.min.y = this.camera.y - this.camera.h / 2;
+            this.render.bounds.max.y = this.camera.y + this.camera.h / 2;
+        }
+        _applyCameraTransform(ctx) {
+            const b = this.render.bounds;
+            ctx.scale(VIEW_W / (b.max.x - b.min.x), VIEW_H / (b.max.y - b.min.y));
+            ctx.translate(-b.min.x, -b.min.y);
+        }
+        // ==========================================================
+        // AUDIO
+        // ==========================================================
+        playSfx(name) {
+            sound.play(name);
+            if (this.mode === 'host') {
+                this.sfxQueue.push(name);
+            }
         }
         // ==========================================================
         // MAPS
@@ -1088,34 +1264,98 @@
         loadMapObj(map) {
             this.platforms.forEach(p => Composite.remove(this.world, p));
             this.platforms = [];
+            this.spinners.forEach(s => Composite.remove(this.world, s.body));
+            this.spinners = [];
             map.platforms.forEach(
-                ([x, y, w, h, color]) => {
-                    const plat = Bodies.rectangle(x, y, w, h, {
+                ([x, y, w, h, color, oneWay]) => {
+                    const opts = {
                         isStatic: true,
                         render: {
-                            fillStyle: color
+                            fillStyle: color,
+                            strokeStyle: oneWay ? '#a7f3e0' : color,
+                            lineWidth: oneWay ? 3 : 0
                         },
-                        friction: 0.8
-                    });
+                        friction: 0.32
+                    };
+                    if (oneWay) {
+                        opts.collisionFilter = {
+                            category: CAT_ONEWAY
+                        };
+                    }
+                    const plat = Bodies.rectangle(x, y, w, h, opts);
+                    plat.isOneWay = !!oneWay;
                     this.platforms.push(plat);
                     Composite.add(this.world, plat);
                 });
+            map.spinners.forEach(
+                ([x, y, len, thick, speed]) => {
+                    const body = Bodies.rectangle(x, y, len, thick, {
+                        isStatic: true,
+                        friction: 0.2,
+                        render: {
+                            fillStyle: SPINNER_COLOR,
+                            strokeStyle: '#ffd60a',
+                            lineWidth: 2
+                        },
+                        chamfer: {
+                            radius: thick / 2
+                        }
+                    });
+                    this.spinners.push({
+                        body,
+                        speed
+                    });
+                    Composite.add(this.world, body);
+                });
             this.currentMap = map;
+        }
+        updateSpinners(dt) {
+            for (const s of this.spinners) {
+                Body.setAngle(s.body, s.body.angle + s.speed * dt, true);
+            }
+        }
+        // Bodies moving upward ignore one-way platforms until they are clear of them again.
+        updateOneWayPassThrough() {
+            const oneWays = this.platforms.filter(p => p.isOneWay);
+            if (!oneWays.length) {
+                return;
+            }
+            const movers = [...this.crates];
+            for (const p of this.players.values()) {
+                if (p.alive) {
+                    movers.push(...p.parts);
+                }
+            }
+            for (const body of movers) {
+                const filter = body.collisionFilter;
+                const passing = (filter.mask & CAT_ONEWAY) === 0;
+                if (!passing) {
+                    if (body.velocity.y < -0.5) {
+                        filter.mask &= ~CAT_ONEWAY;
+                    }
+                    continue;
+                }
+                const stillOverlapping = oneWays.some(plat => body.bounds.min.x < plat.bounds.max.x && body.bounds.max.x > plat.bounds.min.x && body.bounds.min.y < plat.bounds.max.y && body.bounds.max.y > plat.bounds.min.y);
+                if (!stillOverlapping) {
+                    filter.mask |= CAT_ONEWAY;
+                }
+            }
         }
         spawnCrates(positions) {
             this.crates.forEach(c => Composite.remove(this.world, c));
             this.crates = [];
             (positions || this.currentMap.crates).forEach(
                 ([x, y]) => {
-                    const crate = Bodies.rectangle(x, y, 36, 36, {
-                        density: 0.003,
-                        friction: 0.6,
-                        restitution: 0.2,
+                    const crate = Bodies.rectangle(x, y, 34, 34, {
+                        density: 0.0011,
+                        friction: 0.08,
+                        frictionStatic: 0.1,
+                        restitution: 0.35,
                         render: {
                             fillStyle: '#f4a261'
                         },
                         chamfer: {
-                            radius: 4
+                            radius: 10
                         }
                     });
                     this.crates.push(crate);
@@ -1139,11 +1379,11 @@
             if (n === 2) {
                 return idx === 0 ? this.currentMap.blueSpawn : this.currentMap.redSpawn;
             }
-            const margin = 110;
+            const margin = 110 * MAP_SX;
             const usable = WORLD_W - margin * 2;
             return [
                 margin + usable * idx / (n - 1),
-                170
+                260
             ];
         }
         sanitizeUsername(name, id) {
@@ -1216,7 +1456,7 @@
         }
         getSurfacesFor(player) {
             let surfaces = [...this.platforms,
-                this.ground, ...this.crates
+                this.ground, ...this.crates, ...this.spinners.map(s => s.body)
             ];
             for (const p of this.players.values()) {
                 if (p !== player && p.alive) {
@@ -1272,6 +1512,7 @@
             const s = (this.scores.get(id) || 0) + delta;
             this.scores.set(id, s);
             this.updateScoreboardUI();
+            this.playSfx('score');
             if (s >= SCORE_TO_WIN && !this.matchOver) {
                 this.matchOver = true;
                 this.matchWinnerId = id;
@@ -1279,6 +1520,7 @@
                     (a, b) => b[1] - a[1]).map(
                     ([playerId, score]) => `${this.displayName(playerId)}: ${score}`).join(' • ');
                 this.setStatus(`🏆 ${this.displayName(id)} WINS THE MATCH! FINAL SCORE — ${finalScores}`, 0);
+                this.playSfx('win');
                 ui.setNewMatchEnabled(true);
             }
         }
@@ -1288,6 +1530,7 @@
                 return;
             }
             p.removeBody();
+            this.playSfx('eliminate');
             if (message) {
                 this.setStatus(message, 1800);
             }
@@ -1317,6 +1560,7 @@
             }
             this.lastFall = now;
             fallen.forEach(p => p.removeBody());
+            this.playSfx('eliminate');
             const remaining = [...this.players.values()].filter(p => p.alive);
             if (remaining.length <= 1) {
                 const winner = remaining[0];
@@ -1367,6 +1611,7 @@
                 if (this.crown.holderId !== id) {
                     this.crown.holderId = id;
                     this.crown.timer = 0;
+                    this.playSfx('crown');
                     this.setStatus(`${this.displayName(id)} grabbed the crown!`, 1200);
                 }
             }
@@ -1387,10 +1632,10 @@
                 }
             }
             const cb = this.crown.body.position;
-            if (cb.y > 700 || cb.x < -100 || cb.x > WORLD_W + 100) {
+            if (cb.y > WORLD_H + 100 || cb.x < -100 || cb.x > WORLD_W + 100) {
                 Body.setPosition(this.crown.body, {
                     x: WORLD_W / 2,
-                    y: 80
+                    y: 180
                 });
                 Body.setVelocity(this.crown.body, {
                     x: 0,
@@ -1404,12 +1649,26 @@
         // ==========================================================
         // POWERUP SPAWNING
         // ==========================================================
+        pickPowerType() {
+            if (Math.random() < ANCHOR_CHANCE) {
+                return POWER_TYPES.ANCHOR;
+            }
+            const pool = Object.keys(POWER_WEIGHTS).filter(t => !(t === POWER_TYPES.LASER && this.mode === 'local'));
+            const total = pool.reduce((sum, t) => sum + POWER_WEIGHTS[t], 0);
+            let roll = Math.random() * total;
+            for (const t of pool) {
+                roll -= POWER_WEIGHTS[t];
+                if (roll <= 0) {
+                    return t;
+                }
+            }
+            return pool[pool.length - 1];
+        }
         spawnPowerup() {
             if (!this.currentMap || this.matchOver) {
                 return;
             }
-            const types = Object.values(POWER_TYPES);
-            const type = types[Math.floor(Math.random() * types.length)];
+            const type = this.pickPowerType();
             const candidates = [...this.currentMap.platforms];
             const surface = candidates[Math.floor(Math.random() * candidates.length)];
             let x = surface[0];
@@ -1467,6 +1726,7 @@
                     continue;
                 }
                 pickedBy.givePower(pickup.type);
+                this.playSfx('pickup');
                 Composite.remove(this.world, pickup.body);
                 this.powerups.splice(i, 1);
             }
@@ -1479,21 +1739,24 @@
                 return;
             }
             for (const p of this.players.values()) {
-                if (!p.alive || !p.powerType) {
+                if (!p.alive || p.powers.size === 0) {
                     continue;
                 }
                 // Timed powers
-                if (p.powerType === POWER_TYPES.GHOST || p.powerType === POWER_TYPES.INVERT) {
-                    p.powerTimer -= dt;
-                    if (p.powerTimer <= 0) {
-                        const expired = POWERUP_INFO[p.powerType].name;
-                        p.clearPower();
+                for (const [type, state] of [...p.powers]) {
+                    if (!POWER_DURATION[type]) {
+                        continue;
+                    }
+                    state.timer -= dt;
+                    if (state.timer <= 0) {
+                        const expired = POWERUP_INFO[type].name;
+                        p.removePower(type);
                         this.setStatus(`${this.displayName(p.id)}'s ${expired} expired`, 1200);
                     }
                 }
                 // Knockback
                 if (p.hasPower(POWER_TYPES.KNOCKBACK)) {
-                    const strength = 0.0012 * p.powerMultiplier();
+                    const strength = 0.0012 * p.powerMultiplier(POWER_TYPES.KNOCKBACK);
                     for (const other of this.players.values()) {
                         if (other === p || !other.alive || !other.torso) {
                             continue;
@@ -1513,7 +1776,7 @@
                 }
                 // Repulse
                 if (p.hasPower(POWER_TYPES.REPULSE)) {
-                    const strength = 0.0018 * p.powerMultiplier();
+                    const strength = 0.0052 * p.powerMultiplier(POWER_TYPES.REPULSE);
                     for (const other of this.players.values()) {
                         if (other === p || !other.alive || !other.torso) {
                             continue;
@@ -1521,7 +1784,7 @@
                         const dx = other.torso.position.x - p.torso.position.x;
                         const dy = other.torso.position.y - p.torso.position.y;
                         const dist = Math.hypot(dx, dy);
-                        if (dist > 0 && dist < 130) {
+                        if (dist > 0 && dist < 185) {
                             const nx = dx / dist;
                             const ny = dy / dist;
                             Body.applyForce(other.torso, other.torso.position, {
@@ -1541,10 +1804,11 @@
             if (!p.alive || !p.hasPower(POWER_TYPES.GHOST)) {
                 return;
             }
-            const minX = 10;
-            const maxX = WORLD_W - 10;
-            const minY = 10;
-            const maxY = WORLD_H - 10;
+            const minX = 6;
+            const maxX = WORLD_W - 6;
+            const minY = 6;
+            // Kept well below the ground so the wall never lifts a standing player.
+            const maxY = WORLD_H + 50;
             for (const part of p.parts) {
                 let x = part.position.x;
                 let y = part.position.y;
@@ -1584,7 +1848,7 @@
             const result = {
                 ...keyState
             };
-            const inverted = [...this.players.values()].some(other => other.alive && other !== player && other.hasPower(POWER_TYPES.INVERT) && other.powerTimer > 0);
+            const inverted = [...this.players.values()].some(other => other.alive && other !== player && other.hasPower(POWER_TYPES.INVERT) && other.powerTimerOf(POWER_TYPES.INVERT) > 0);
             if (!inverted) {
                 return result;
             }
@@ -1598,7 +1862,7 @@
         // LASER
         // ==========================================================
         fireLaser(player) {
-            if (this.mode === 'client' || !player.alive || !player.hasPower(POWER_TYPES.LASER) || !player.laserReady) {
+            if (this.mode === 'client' || this.mode === 'local' || !player.alive || !player.hasPower(POWER_TYPES.LASER) || !player.laserReady) {
                 return;
             }
             const now = Date.now();
@@ -1607,13 +1871,25 @@
             }
             player.lastLaser = now;
             player.laserReady = false;
+            // Aim along the torso -> head axis, starting just outside the head.
+            let dirX = player.head.position.x - player.torso.position.x;
+            let dirY = player.head.position.y - player.torso.position.y;
+            const dirLen = Math.hypot(dirX, dirY);
+            if (dirLen < 0.001) {
+                dirX = 0;
+                dirY = -1;
+            } else {
+                dirX /= dirLen;
+                dirY /= dirLen;
+            }
             const start = {
-                x: player.head.position.x,
-                y: player.head.position.y - 12
+                x: player.head.position.x + dirX * 20,
+                y: player.head.position.y + dirY * 20
             };
+            const RANGE = 2200;
             const end = {
-                x: start.x,
-                y: -30
+                x: start.x + dirX * RANGE,
+                y: start.y + dirY * RANGE
             };
             let hitPlayer = null;
             let hitDistance = Infinity;
@@ -1622,7 +1898,7 @@
                     continue;
                 }
                 for (const part of other.parts) {
-                    const radius = part.circleRadius || 10;
+                    const radius = part.circleRadius || 15;
                     const hit = this.lineHitsCircle(start, end, part.position, radius);
                     if (hit !== null && hit < hitDistance) {
                         hitDistance = hit;
@@ -1631,19 +1907,18 @@
                 }
             }
             this.laserEffects.push({
+                id: ++this._laserSeq,
                 start,
                 end,
                 color: player.color,
                 life: 0.18
             });
+            this.playSfx('laser');
             if (hitPlayer) {
                 this.eliminatePlayer(hitPlayer.id, `${this.displayName(player.id)} blasted ${this.displayName(hitPlayer.id)}!`);
             }
             // Laser is consumed.
-            player.powerType = null;
-            player.powerLevel = 0;
-            player.powerTimer = 0;
-            player.updateVisuals();
+            player.removePower(POWER_TYPES.LASER);
         }
         lineHitsCircle(a, b, center, radius) {
             const dx = b.x - a.x;
@@ -1802,7 +2077,8 @@
                     alive: p.alive,
                     moveMult: p.moveMult,
                     jumpMult: p.jumpMult,
-                    power: p.serializePower()
+                    power: p.serializePower(),
+                    laserReady: p.laserReady
                 })),
                 scores: Object.fromEntries(this.scores),
                 matchOver: this.matchOver,
@@ -1823,6 +2099,16 @@
                     x: p.body.position.x,
                     y: p.body.position.y
                 })),
+                lasers: this.laserEffects.map(l => ({
+                    id: l.id,
+                    sx: l.start.x,
+                    sy: l.start.y,
+                    ex: l.end.x,
+                    ey: l.end.y,
+                    color: l.color
+                })),
+                spinners: this.spinners.map(s => s.body.angle),
+                sfx: this.sfxQueue.splice(0, this.sfxQueue.length),
                 bodies
             };
         }
@@ -1841,6 +2127,9 @@
             this.matchWinnerId = msg.winnerId === null || msg.winnerId === undefined ? null : Number(msg.winnerId);
             this.crown.holderId = msg.crownHolder === undefined ? null : msg.crownHolder;
             this.crown.timer = Number(msg.crownTimer) || 0;
+            for (const name of (msg.sfx || [])) {
+                sound.play(name);
+            }
             // --------------------------------------------------------
             // Roster
             // --------------------------------------------------------
@@ -1863,14 +2152,7 @@
                 p.username = this.sanitizeUsername(r.username, r.id);
                 p.moveMult = r.moveMult;
                 p.jumpMult = r.jumpMult;
-                if (r.power) {
-                    p.powerType = r.power.type || null;
-                    p.powerLevel = Number(r.power.level) || 0;
-                    p.powerTimer = Number(r.power.timer) || 0;
-                    p.laserReady = !!r.power.laserReady;
-                } else {
-                    p.clearPower();
-                }
+                p.applyPowerState(r.power, r.laserReady);
                 if (r.alive && p.parts.length === 0) {
                     p.spawnBody(WORLD_W / 2, -300);
                 }
@@ -1941,6 +2223,38 @@
                     p.body.render.fillStyle = POWERUP_INFO[data.type].color;
                 });
             // --------------------------------------------------------
+            // Spinners
+            // --------------------------------------------------------
+            if (Array.isArray(msg.spinners)) {
+                msg.spinners.forEach((angle, i) => {
+                    if (this.spinners[i]) {
+                        Body.setAngle(this.spinners[i].body, angle, true);
+                    }
+                });
+            }
+            // --------------------------------------------------------
+            // Laser effects (host-authored, replayed once per id)
+            // --------------------------------------------------------
+            for (const l of (msg.lasers || [])) {
+                if (l.id <= this._lastSeenLaserId) {
+                    continue;
+                }
+                this._lastSeenLaserId = l.id;
+                this.laserEffects.push({
+                    id: l.id,
+                    start: {
+                        x: l.sx,
+                        y: l.sy
+                    },
+                    end: {
+                        x: l.ex,
+                        y: l.ey
+                    },
+                    color: l.color,
+                    life: 0.18
+                });
+            }
+            // --------------------------------------------------------
             // Bodies
             // --------------------------------------------------------
             const byLabel = new Map(
@@ -1992,6 +2306,8 @@
                     const dt = Math.min(0.05,
                         (now - this._lastTime) / 1000);
                     this._lastTime = now;
+                    this.updateSpinners(dt);
+                    this.updateOneWayPassThrough();
                     // Client does not simulate physics.
                     if (this.mode === 'client') {
                         for (const p of this.players.values()) {
@@ -2079,9 +2395,12 @@
             // --------------------------------------------------------
             // Drawing
             // --------------------------------------------------------
+            Events.on(this.render, 'beforeRender', () => this.updateCamera());
             Events.on(this.render, 'afterRender',
                 () => {
                     const ctx = this.render.context;
+                    ctx.save();
+                    this._applyCameraTransform(ctx);
                     // Crown holder glow
                     const holderId = this.crown.holderId;
                     if (this.crown.body && holderId !== null && holderId !== undefined) {
@@ -2120,7 +2439,7 @@
                             continue;
                         }
                         const x = p.head.position.x;
-                        const y = p.head.position.y - 28;
+                        const y = p.head.position.y - 34;
                         ctx.save();
                         ctx.textAlign = 'center';
                         ctx.textBaseline = 'middle';
@@ -2130,23 +2449,29 @@
                         ctx.fillText(p.username, x + 1, y + 1);
                         ctx.fillStyle = p.color;
                         ctx.fillText(p.username, x, y);
-                        // Power label
-                        if (p.powerType) {
-                            const info = POWERUP_INFO[p.powerType];
-                            const powerY = y - 20;
-                            ctx.font = 'bold 12px Segoe UI, sans-serif';
-                            ctx.fillStyle = info.color;
+                        // Power labels, stacked upward
+                        let powerY = y - 20;
+                        ctx.font = 'bold 12px Segoe UI, sans-serif';
+                        for (const [type, state] of p.powers) {
+                            const info = POWERUP_INFO[type];
+                            if (!info || state.level <= 0) {
+                                continue;
+                            }
                             let label = `${info.icon} ${info.name}`;
-                            if (p.powerLevel > 1) {
-                                label += ` Lv.${p.powerLevel}`;
+                            if (state.level > 1) {
+                                label += ` Lv.${state.level}`;
                             }
-                            if (p.powerTimer > 0) {
-                                label += ` ${Math.ceil(p.powerTimer)}s`;
+                            if (state.timer > 0) {
+                                label += ` ${Math.ceil(state.timer)}s`;
                             }
-                            if (p.powerType === POWER_TYPES.LASER && p.laserReady) {
+                            if (type === POWER_TYPES.LASER && p.laserReady) {
                                 label += ' • SPACE';
                             }
+                            ctx.fillStyle = 'rgba(0,0,0,0.75)';
+                            ctx.fillText(label, x + 1, powerY + 1);
+                            ctx.fillStyle = info.color;
                             ctx.fillText(label, x, powerY);
+                            powerY -= 15;
                         }
                         ctx.restore();
                     }
@@ -2165,7 +2490,7 @@
                             12,
                             10
                         ]);
-                        ctx.strokeRect(18, 18, WORLD_W - 36, WORLD_H - 48);
+                        ctx.strokeRect(6, 6, WORLD_W - 12, WORLD_H - 12);
                         ctx.restore();
                     }
                     // ----------------------------------------------------
@@ -2189,6 +2514,7 @@
                             this.laserEffects.splice(i, 1);
                         }
                     }
+                    ctx.restore();
                 });
             Render.run(this.render);
             Runner.run(Runner.create(), this.engine);
@@ -2493,6 +2819,234 @@
         }
     }
     // ============================================================
+    // AUDIO (fully synthesised, no assets)
+    // ============================================================
+    const sound = {
+        ctx: null,
+        master: null,
+        musicGain: null,
+        sfxGain: null,
+        enabled: true,
+        step: 0,
+        timer: null,
+        lastPlayed: new Map(),
+        init() {
+            if (this.ctx) {
+                return;
+            }
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (!AudioCtx) {
+                return;
+            }
+            this.ctx = new AudioCtx();
+            this.master = this.ctx.createGain();
+            this.master.gain.value = this.enabled ? 0.9 : 0;
+            this.master.connect(this.ctx.destination);
+            this.musicGain = this.ctx.createGain();
+            this.musicGain.gain.value = 0.16;
+            this.musicGain.connect(this.master);
+            this.sfxGain = this.ctx.createGain();
+            this.sfxGain.gain.value = 0.5;
+            this.sfxGain.connect(this.master);
+        },
+        // Called from the first user gesture, since browsers block autoplay.
+        unlock() {
+            this.init();
+            if (!this.ctx) {
+                return;
+            }
+            if (this.ctx.state === 'suspended') {
+                this.ctx.resume();
+            }
+            this.startMusic();
+        },
+        setEnabled(on) {
+            this.enabled = on;
+            if (this.master) {
+                this.master.gain.value = on ? 0.9 : 0;
+            }
+        },
+        tone({
+            type = 'square',
+            from,
+            to = from,
+            duration = 0.15,
+            gain = 0.35,
+            delay = 0,
+            dest = null
+        }) {
+            if (!this.ctx) {
+                return;
+            }
+            const t0 = this.ctx.currentTime + delay;
+            const osc = this.ctx.createOscillator();
+            const env = this.ctx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(from, t0);
+            if (to !== from) {
+                osc.frequency.exponentialRampToValueAtTime(Math.max(20, to), t0 + duration);
+            }
+            env.gain.setValueAtTime(0.0001, t0);
+            env.gain.exponentialRampToValueAtTime(gain, t0 + 0.012);
+            env.gain.exponentialRampToValueAtTime(0.0001, t0 + duration);
+            osc.connect(env);
+            env.connect(dest || this.sfxGain);
+            osc.start(t0);
+            osc.stop(t0 + duration + 0.02);
+        },
+        noise({
+            duration = 0.2,
+            gain = 0.3,
+            filterFrom = 1800,
+            filterTo = 200
+        }) {
+            if (!this.ctx) {
+                return;
+            }
+            const t0 = this.ctx.currentTime;
+            const frames = Math.floor(this.ctx.sampleRate * duration);
+            const buffer = this.ctx.createBuffer(1, frames, this.ctx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < frames; i++) {
+                data[i] = (Math.random() * 2 - 1) * (1 - i / frames);
+            }
+            const src = this.ctx.createBufferSource();
+            src.buffer = buffer;
+            const filter = this.ctx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(filterFrom, t0);
+            filter.frequency.exponentialRampToValueAtTime(Math.max(40, filterTo), t0 + duration);
+            const env = this.ctx.createGain();
+            env.gain.setValueAtTime(gain, t0);
+            env.gain.exponentialRampToValueAtTime(0.0001, t0 + duration);
+            src.connect(filter);
+            filter.connect(env);
+            env.connect(this.sfxGain);
+            src.start(t0);
+        },
+        play(name) {
+            if (!this.ctx || !this.enabled) {
+                return;
+            }
+            // Cheap de-dupe so simultaneous events do not stack into clipping.
+            const now = this.ctx.currentTime;
+            if (now - (this.lastPlayed.get(name) || -1) < 0.05) {
+                return;
+            }
+            this.lastPlayed.set(name, now);
+            switch (name) {
+                case 'jump':
+                    this.tone({
+                        type: 'square',
+                        from: 300,
+                        to: 620,
+                        duration: 0.11,
+                        gain: 0.22
+                    });
+                    break;
+                case 'pickup':
+                    [660, 880, 1320].forEach((f, i) => this.tone({
+                        type: 'triangle',
+                        from: f,
+                        duration: 0.1,
+                        gain: 0.3,
+                        delay: i * 0.06
+                    }));
+                    break;
+                case 'laser':
+                    this.tone({
+                        type: 'sawtooth',
+                        from: 1400,
+                        to: 120,
+                        duration: 0.28,
+                        gain: 0.28
+                    });
+                    break;
+                case 'eliminate':
+                    this.tone({
+                        type: 'square',
+                        from: 320,
+                        to: 60,
+                        duration: 0.4,
+                        gain: 0.3
+                    });
+                    this.noise({
+                        duration: 0.35,
+                        gain: 0.25
+                    });
+                    break;
+                case 'crown':
+                    [523, 659, 784].forEach((f, i) => this.tone({
+                        type: 'triangle',
+                        from: f,
+                        duration: 0.16,
+                        gain: 0.28,
+                        delay: i * 0.07
+                    }));
+                    break;
+                case 'score':
+                    [784, 988, 1175, 1568].forEach((f, i) => this.tone({
+                        type: 'square',
+                        from: f,
+                        duration: 0.14,
+                        gain: 0.24,
+                        delay: i * 0.08
+                    }));
+                    break;
+                case 'win':
+                    [523, 659, 784, 1046, 1318].forEach((f, i) => this.tone({
+                        type: 'triangle',
+                        from: f,
+                        duration: 0.32,
+                        gain: 0.32,
+                        delay: i * 0.13
+                    }));
+                    break;
+                default:
+                    break;
+            }
+        },
+        startMusic() {
+            if (!this.ctx || this.timer !== null) {
+                return;
+            }
+            // Am - F - C - G, one bar of eight 8th-notes each.
+            const chords = [
+                [220.0, 261.6, 329.6],
+                [174.6, 220.0, 261.6],
+                [261.6, 329.6, 392.0],
+                [196.0, 246.9, 293.7]
+            ];
+            const bass = [110.0, 87.3, 130.8, 98.0];
+            const stepMs = 170;
+            this.timer = setInterval(() => {
+                if (!this.enabled || this.ctx.state !== 'running') {
+                    return;
+                }
+                const bar = Math.floor(this.step / 8) % chords.length;
+                const beat = this.step % 8;
+                const chord = chords[bar];
+                this.tone({
+                    type: 'triangle',
+                    from: chord[beat % chord.length] * (beat >= 4 ? 2 : 1),
+                    duration: 0.16,
+                    gain: 0.5,
+                    dest: this.musicGain
+                });
+                if (beat === 0 || beat === 3 || beat === 6) {
+                    this.tone({
+                        type: 'sawtooth',
+                        from: bass[bar],
+                        duration: 0.3,
+                        gain: 0.55,
+                        dest: this.musicGain
+                    });
+                }
+                this.step++;
+            }, stepMs);
+        }
+    };
+    // ============================================================
     // UI
     // ============================================================
     const ui = {
@@ -2527,6 +3081,16 @@
     // Disconnect
     document.getElementById('disconnect-btn').addEventListener('click',
         () => game.net.disconnect(true));
+    // Sound
+    const soundBtn = document.getElementById('sound-btn');
+    soundBtn.addEventListener('click', () => {
+        sound.setEnabled(!sound.enabled);
+        soundBtn.textContent = sound.enabled ? '🔊 Sound On' : '🔇 Sound Off';
+    });
+    // Browsers require a gesture before audio may start.
+    const unlockAudio = () => sound.unlock();
+    window.addEventListener('pointerdown', unlockAudio);
+    window.addEventListener('keydown', unlockAudio);
     // Update local username when changed.
     document.getElementById('username').addEventListener('input', e => {
         const value = game.sanitizeUsername(e.target.value, 0);
